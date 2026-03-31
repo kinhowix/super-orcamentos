@@ -71,6 +71,15 @@ export default function NovoOrcamento() {
       Math.abs(parseFloat(item.olhoEsquerdo.adicao) || 0)
     )
 
+    // Filter type based on addition
+    if (ad === 0) {
+      // Se não tem adição, só permite visão simples
+      result = result.filter(l => l.tipo !== 'multifocal')
+    } else {
+      // Se tem adição, só permite multifocal
+      result = result.filter(l => l.tipo === 'multifocal')
+    }
+
     if (esf > 0 || cil > 0 || ad > 0) {
       result = result.filter(l => {
         const spec = l.especificacoes
