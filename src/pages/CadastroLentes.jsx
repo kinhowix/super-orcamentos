@@ -1,20 +1,38 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   Upload, Plus, Trash2, Save, FileText, Eye, 
-  ChevronDown, ChevronUp, Copy, AlertCircle, Check
+  ChevronDown, ChevronUp, Copy, AlertCircle, Check, Settings, GripVertical
 } from 'lucide-react'
 import { useToast } from '../contexts/ToastContext'
 import {
   saveLente, saveLentesEmLote, getFornecedores, addFornecedor,
-  getAntiReflexoLabel, formatCurrency
+  getAntiReflexoLabel, formatCurrency,
+  getNiveisARFornecedor, getNiveisARByFornecedor,
+  saveNiveisARFornecedor, deleteNiveisARFornecedor
 } from '../services/dataStore'
 import { extractPDFStructured } from '../services/pdfParser'
 
-const NIVEIS_AR_PADRAO = [
-  { key: 'duravision_gold', label: 'Duravision Gold' },
-  { key: 'duravision_platinum', label: 'Duravision Platinum' },
-  { key: 'duravision_silver', label: 'Duravision Silver' },
-  { key: 'duravision_chrome', label: 'Duravision Chrome' },
+// AR levels predefinidos por marca conhecida
+const AR_PREDEFINIDOS = {
+  Zeiss: [
+    { key: 'duravision_platinum', label: 'Duravision Platinum' },
+    { key: 'duravision_gold', label: 'Duravision Gold' },
+    { key: 'duravision_silver', label: 'Duravision Silver' },
+    { key: 'duravision_chrome', label: 'Duravision Chrome' },
+    { key: 'sem_ar', label: 'Sem AR' },
+  ],
+  Essilor: [
+    { key: 'crizal_prevencia', label: 'Crizal Prevência' },
+    { key: 'crizal_saphire_hr', label: 'Crizal Saphire HR' },
+    { key: 'crizal_rock', label: 'Crizal Rock' },
+    { key: 'crizal_easy_pro', label: 'Crizal Easy Pro' },
+    { key: 'optifog', label: 'Optifog' },
+    { key: 'trio_easy_clean', label: 'Trio Easy Clean' },
+    { key: 'verniz_hc', label: 'Verniz HC' },
+  ],
+}
+
+const AR_FALLBACK = [
   { key: 'sem_ar', label: 'Sem AR' },
 ]
 
@@ -24,11 +42,22 @@ const EMPTY_INDICE = {
   precos: {}
 }
 
+// Retorna os níveis de AR para um fornecedor (do storage ou predefinido)
+function resolveNiveisAR(fornecedor) {
+  if (!fornecedor) return AR_FALLBACK.map(n => n.key)
+  const saved = getNiveisARByFornecedor(fornecedor)
+  if (saved) return saved.niveis
+  // Tenta predefinido
+  const pre = AR_PREDEFINIDOS[fornecedor]
+  if (pre) return pre.map(n => n.key)
+  return AR_FALLBACK.map(n => n.key)
+}
+
 const EMPTY_LENTE = {
   fornecedor: '',
   tipo: 'multifocal',
   nome: '',
-  niveisAR: NIVEIS_AR_PADRAO.map(n => n.key),
+  niveisAR: AR_FALLBACK.map(n => n.key),
   indices: [{ ...EMPTY_INDICE }],
   especificacoes: {
     esferico_min: '',
@@ -44,7 +73,7 @@ const EMPTY_LENTE = {
 export default function CadastroLentes() {
   const toast = useToast()
   const fileInputRef = useRef(null)
-  const [activeTab, setActiveTab] = useState('manual') // manual | pdf | lote
+  const [activeTab, setActiveTab] = useState('manual') // manual | pdf | lote | niveis_ar
   const [fornecedores, setFornecedores] = useState([])
   const [novoFornecedor, setNovoFornecedor] = useState('')
   const [showAddFornecedor, setShowAddFornecedor] = useState(false)
@@ -67,23 +96,48 @@ export default function CadastroLentes() {
   const [loteFornecedor, setLoteFornecedor] = useState('')
   const [loteTipo, setLoteTipo] = useState('multifocal')
   const [loteNome, setLoteNome] = useState('')
-  const [loteARColumns, setLoteARColumns] = useState(NIVEIS_AR_PADRAO.map(n => n.key))
+  const [loteARColumns, setLoteARColumns] = useState(AR_FALLBACK.map(n => n.key))
+
+  // Níveis AR por fornecedor state
+  const [niveisARConfig, setNiveisARConfig] = useState([])
+  const [arEditFornecedor, setArEditFornecedor] = useState('')
+  const [arEditNiveis, setArEditNiveis] = useState([])
+  const [novoAREdit, setNovoAREdit] = useState('')
+  const [novoAREditLabel, setNovoAREditLabel] = useState('')
 
   useEffect(() => {
     setFornecedores(getFornecedores())
+    setNiveisARConfig(getNiveisARFornecedor())
   }, [])
 
   // ========== AR Levels Management ==========
   const getAllARLevels = () => {
-    const all = [...NIVEIS_AR_PADRAO.map(n => n.key), ...customAR]
-    return all
+    const base = resolveNiveisAR(lente.fornecedor)
+    return [...new Set([...base, ...customAR])]
   }
 
   const getARLabel = (key) => {
-    const found = NIVEIS_AR_PADRAO.find(n => n.key === key)
-    if (found) return found.label
-    return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    return getAntiReflexoLabel(key)
   }
+
+  // Quando o fornecedor muda no manual form, auto-carrega os níveis de AR
+  const handleFornecedorChange = (value) => {
+    const niveis = resolveNiveisAR(value)
+    setLente(prev => ({
+      ...prev,
+      fornecedor: value,
+      niveisAR: niveis,
+    }))
+    setCustomAR([])
+  }
+
+  // Quando o fornecedor muda no lote, auto-carrega
+  const handleLoteFornecedorChange = (value) => {
+    const niveis = resolveNiveisAR(value)
+    setLoteFornecedor(value)
+    setLoteARColumns(niveis)
+  }
+
 
   const handleAddAR = () => {
     if (novoAR.trim()) {
@@ -161,7 +215,7 @@ export default function CadastroLentes() {
     if (novoFornecedor.trim()) {
       const updated = addFornecedor(novoFornecedor.trim())
       setFornecedores(updated)
-      setLente(prev => ({ ...prev, fornecedor: novoFornecedor.trim() }))
+      handleFornecedorChange(novoFornecedor.trim())
       setNovoFornecedor('')
       setShowAddFornecedor(false)
     }
@@ -374,6 +428,72 @@ export default function CadastroLentes() {
     setLoteNome('')
   }
 
+  // ========== Níveis AR por Fornecedor Handlers ==========
+  const handleSelectAREdit = (fornecedor) => {
+    setArEditFornecedor(fornecedor)
+    const saved = getNiveisARByFornecedor(fornecedor)
+    if (saved) {
+      setArEditNiveis(saved.niveis.map(key => ({ key, label: getAntiReflexoLabel(key) })))
+    } else if (AR_PREDEFINIDOS[fornecedor]) {
+      setArEditNiveis([...AR_PREDEFINIDOS[fornecedor]])
+    } else {
+      setArEditNiveis([])
+    }
+    setNovoAREdit('')
+    setNovoAREditLabel('')
+  }
+
+  const handleAddAREdit = () => {
+    const rawLabel = novoAREditLabel.trim() || novoAREdit.trim()
+    const key = novoAREdit.trim().toLowerCase().replace(/\s+/g, '_')
+    if (!key) return
+    if (arEditNiveis.find(n => n.key === key)) {
+      toast.error('Esse AR já existe na lista')
+      return
+    }
+    setArEditNiveis(prev => [...prev, { key, label: rawLabel }])
+    setNovoAREdit('')
+    setNovoAREditLabel('')
+  }
+
+  const handleRemoveAREdit = (key) => {
+    setArEditNiveis(prev => prev.filter(n => n.key !== key))
+  }
+
+  const handleMoveAREdit = (idx, dir) => {
+    setArEditNiveis(prev => {
+      const arr = [...prev]
+      const target = idx + dir
+      if (target < 0 || target >= arr.length) return arr
+      ;[arr[idx], arr[target]] = [arr[target], arr[idx]]
+      return arr
+    })
+  }
+
+  const handleSaveAREdit = () => {
+    if (!arEditFornecedor) {
+      toast.error('Selecione um fornecedor')
+      return
+    }
+    if (arEditNiveis.length === 0) {
+      toast.error('Adicione pelo menos um nível de AR')
+      return
+    }
+    saveNiveisARFornecedor(arEditFornecedor, arEditNiveis.map(n => n.key))
+    setNiveisARConfig(getNiveisARFornecedor())
+    toast.success(`Níveis de AR da ${arEditFornecedor} salvos com sucesso!`)
+  }
+
+  const handleDeleteARConfig = (fornecedor) => {
+    deleteNiveisARFornecedor(fornecedor)
+    setNiveisARConfig(getNiveisARFornecedor())
+    if (arEditFornecedor === fornecedor) {
+      setArEditFornecedor('')
+      setArEditNiveis([])
+    }
+    toast.success(`Configuração da ${fornecedor} removida`)
+  }
+
   return (
     <div className="animate-in">
       <div className="page-header">
@@ -401,6 +521,13 @@ export default function CadastroLentes() {
         >
           📋 Cadastro em Lote
         </button>
+        <button
+          className={`tab ${activeTab === 'niveis_ar' ? 'active' : ''}`}
+          onClick={() => setActiveTab('niveis_ar')}
+        >
+          <Settings size={14} style={{ marginRight: '6px', display: 'inline' }} />
+          Níveis de AR
+        </button>
       </div>
 
       {/* Manual Tab */}
@@ -414,6 +541,7 @@ export default function CadastroLentes() {
           novoAR={novoAR}
           customAR={customAR}
           onLenteChange={handleLenteChange}
+          onFornecedorChange={handleFornecedorChange}
           onSpecChange={handleSpecChange}
           onAddIndice={addIndice}
           onRemoveIndice={removeIndice}
@@ -459,7 +587,7 @@ export default function CadastroLentes() {
           fornecedores={fornecedores}
           onLoteChange={handleLoteChange}
           onLotePrecoChange={handleLotePrecoChange}
-          onSetLoteFornecedor={setLoteFornecedor}
+          onSetLoteFornecedor={handleLoteFornecedorChange}
           onSetLoteTipo={setLoteTipo}
           onSetLoteNome={setLoteNome}
           onToggleLoteAR={handleToggleLoteAR}
@@ -467,7 +595,28 @@ export default function CadastroLentes() {
           onRemoveRow={removeLoteRow}
           onSave={handleSaveLote}
           getARLabel={getARLabel}
-          getAllARLevels={() => [...NIVEIS_AR_PADRAO.map(n => n.key), ...customAR]}
+          getAllARLevels={() => resolveNiveisAR(loteFornecedor)}
+        />
+      )}
+
+      {/* Níveis AR Tab */}
+      {activeTab === 'niveis_ar' && (
+        <NiveisARForm
+          fornecedores={fornecedores}
+          niveisARConfig={niveisARConfig}
+          arEditFornecedor={arEditFornecedor}
+          arEditNiveis={arEditNiveis}
+          novoAREdit={novoAREdit}
+          novoAREditLabel={novoAREditLabel}
+          onSelectFornecedor={handleSelectAREdit}
+          onAddAR={handleAddAREdit}
+          onRemoveAR={handleRemoveAREdit}
+          onMoveAR={handleMoveAREdit}
+          onSave={handleSaveAREdit}
+          onDelete={handleDeleteARConfig}
+          onSetNovoAREdit={setNovoAREdit}
+          onSetNovoAREditLabel={setNovoAREditLabel}
+          getARLabel={getARLabel}
         />
       )}
     </div>
@@ -478,7 +627,7 @@ export default function CadastroLentes() {
 function ManualForm({
   lente, fornecedores, showAddFornecedor, novoFornecedor,
   showAddAR, novoAR, customAR,
-  onLenteChange, onSpecChange, onAddIndice, onRemoveIndice,
+  onLenteChange, onFornecedorChange, onSpecChange, onAddIndice, onRemoveIndice,
   onIndiceChange, onPrecoChange, onToggleAR,
   onSetShowAddFornecedor, onSetNovoFornecedor, onAddFornecedor,
   onSetShowAddAR, onSetNovoAR, onAddAR,
@@ -498,7 +647,7 @@ function ManualForm({
             <select
               className="form-select"
               value={lente.fornecedor}
-              onChange={e => onLenteChange('fornecedor', e.target.value)}
+              onChange={e => onFornecedorChange(e.target.value)}
             >
               <option value="">Selecione...</option>
               {fornecedores.map(f => (
@@ -1222,6 +1371,274 @@ function LoteForm({
         <button className="btn btn-primary" onClick={onSave}>
           <Save size={16} /> Salvar Todas as Lentes
         </button>
+      </div>
+    </div>
+  )
+}
+
+// ========== NÍVEIS AR POR FORNECEDOR COMPONENT ==========
+function NiveisARForm({
+  fornecedores, niveisARConfig, arEditFornecedor, arEditNiveis,
+  novoAREdit, novoAREditLabel,
+  onSelectFornecedor, onAddAR, onRemoveAR, onMoveAR, onSave, onDelete,
+  onSetNovoAREdit, onSetNovoAREditLabel, getARLabel
+}) {
+  // Fornecedores que já têm config salva
+  const fornecedoresComConfig = niveisARConfig.map(n => n.fornecedor)
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '24px', alignItems: 'start' }}>
+      
+      {/* Left: supplier list */}
+      <div className="card" style={{ padding: '0' }}>
+        <div className="card-header" style={{ padding: '16px 20px' }}>
+          <h3 className="card-title" style={{ fontSize: '14px' }}>⚙️ Fornecedores</h3>
+        </div>
+        <div style={{ padding: '8px' }}>
+          {fornecedores.map(f => {
+            const hasConfig = fornecedoresComConfig.includes(f)
+            const isEditing = arEditFornecedor === f
+            return (
+              <div
+                key={f}
+                onClick={() => onSelectFornecedor(f)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  cursor: 'pointer',
+                  background: isEditing ? 'var(--accent-primary-bg)' : 'transparent',
+                  border: isEditing ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent',
+                  marginBottom: '4px',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{
+                    width: '8px', height: '8px', borderRadius: '50%',
+                    background: hasConfig ? 'var(--accent-green)' : 'var(--border-color)',
+                    flexShrink: 0,
+                  }} />
+                  <span style={{
+                    fontSize: '14px',
+                    color: isEditing ? 'var(--accent-primary-hover)' : 'var(--text-primary)',
+                    fontWeight: isEditing ? '600' : '400',
+                  }}>{f}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {hasConfig && (
+                    <span style={{
+                      fontSize: '10px',
+                      background: 'var(--accent-green-bg, rgba(16,185,129,0.1))',
+                      color: 'var(--accent-green)',
+                      padding: '2px 6px',
+                      borderRadius: '10px',
+                    }}>
+                      {niveisARConfig.find(n => n.fornecedor === f)?.niveis.length} AR
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-color)', fontSize: '12px', color: 'var(--text-muted)' }}>
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-green)', display: 'inline-block', marginRight: '6px' }} />
+          Configurado &nbsp;
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--border-color)', display: 'inline-block', marginRight: '6px', marginLeft: '8px' }} />
+          Padrão
+        </div>
+      </div>
+
+      {/* Right: editor */}
+      <div className="card">
+        {!arEditFornecedor ? (
+          <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎯</div>
+            <h3 style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>
+              Selecione um fornecedor
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '8px' }}>
+              Clique em um fornecedor à esquerda para configurar seus níveis de antirreflexo
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="card-header">
+              <div>
+                <h3 className="card-title">Níveis de AR — {arEditFornecedor}</h3>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Configure os antirreflexos disponíveis para esta marca. A ordem define a sequência das colunas de preço.
+                </p>
+              </div>
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={() => onDelete(arEditFornecedor)}
+                title="Remover configuração"
+              >
+                <Trash2 size={14} /> Remover Config
+              </button>
+            </div>
+
+            <div style={{ padding: '0 0 16px' }}>
+              {/* Info about auto-load */}
+              <div style={{
+                background: 'var(--accent-primary-bg)',
+                border: '1px solid rgba(99,102,241,0.2)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '10px 14px',
+                marginBottom: '20px',
+                fontSize: '13px',
+                color: 'var(--accent-primary-hover)',
+                display: 'flex',
+                gap: '8px',
+                alignItems: 'flex-start',
+              }}>
+                <AlertCircle size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
+                <span>
+                  Ao selecionar <strong>{arEditFornecedor}</strong> no cadastro de lentes, esses níveis de AR 
+                  serão preenchidos automaticamente.
+                </span>
+              </div>
+
+              {/* AR List */}
+              {arEditNiveis.length === 0 ? (
+                <div style={{
+                  padding: '32px',
+                  textAlign: 'center',
+                  background: 'var(--bg-glass)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px dashed var(--border-color)',
+                  color: 'var(--text-muted)',
+                  fontSize: '14px',
+                  marginBottom: '16px',
+                }}>
+                  Nenhum nível de AR adicionado ainda. Use o formulário abaixo para adicionar.
+                </div>
+              ) : (
+                <div style={{ marginBottom: '16px' }}>
+                  {arEditNiveis.map((nivel, idx) => (
+                    <div
+                      key={nivel.key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '10px 12px',
+                        background: 'var(--bg-glass)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-sm)',
+                        marginBottom: '6px',
+                      }}
+                    >
+                      {/* Order number */}
+                      <span style={{
+                        width: '24px', height: '24px',
+                        borderRadius: '50%',
+                        background: 'var(--accent-primary-bg)',
+                        color: 'var(--accent-primary-hover)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '11px', fontWeight: '700', flexShrink: 0,
+                      }}>
+                        {idx + 1}
+                      </span>
+
+                      {/* Label */}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '500', fontSize: '14px', color: 'var(--text-primary)' }}>
+                          {nivel.label}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                          {nivel.key}
+                        </div>
+                      </div>
+
+                      {/* Move buttons */}
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          className="btn btn-secondary btn-icon btn-sm"
+                          onClick={() => onMoveAR(idx, -1)}
+                          disabled={idx === 0}
+                          title="Mover para cima"
+                          style={{ opacity: idx === 0 ? 0.3 : 1 }}
+                        >
+                          <ChevronUp size={14} />
+                        </button>
+                        <button
+                          className="btn btn-secondary btn-icon btn-sm"
+                          onClick={() => onMoveAR(idx, 1)}
+                          disabled={idx === arEditNiveis.length - 1}
+                          title="Mover para baixo"
+                          style={{ opacity: idx === arEditNiveis.length - 1 ? 0.3 : 1 }}
+                        >
+                          <ChevronDown size={14} />
+                        </button>
+                        <button
+                          className="btn btn-danger btn-icon btn-sm"
+                          onClick={() => onRemoveAR(nivel.key)}
+                          title="Remover"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add new AR */}
+              <div style={{
+                background: 'var(--bg-glass)',
+                border: '1px dashed var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '16px',
+                marginBottom: '20px',
+              }}>
+                <label className="form-label" style={{ marginBottom: '10px' }}>
+                  ➕ Adicionar Nível de AR
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px', alignItems: 'end' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" style={{ fontSize: '11px' }}>Nome de exibição</label>
+                    <input
+                      className="form-input"
+                      placeholder="Ex: Crizal Prevência"
+                      value={novoAREditLabel}
+                      onChange={e => onSetNovoAREditLabel(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && onAddAR()}
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" style={{ fontSize: '11px' }}>Chave (gerada automático)</label>
+                    <input
+                      className="form-input"
+                      placeholder="crizal_prevencia"
+                      value={novoAREdit}
+                      onChange={e => onSetNovoAREdit(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && onAddAR()}
+                      style={{ fontFamily: 'monospace', fontSize: '13px' }}
+                    />
+                  </div>
+                  <button className="btn btn-primary btn-sm" onClick={onAddAR} style={{ height: '42px' }}>
+                    <Plus size={14} /> Adicionar
+                  </button>
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                  Preencha apenas o "Nome de exibição" — a chave será gerada automaticamente. Ou defina ambos manualmente.
+                </p>
+              </div>
+
+              {/* Save button */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button className="btn btn-primary" onClick={onSave}>
+                  <Save size={16} /> Salvar Níveis de AR
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

@@ -3,6 +3,7 @@ const STORAGE_KEYS = {
   LENTES: 'super_orcamentos_lentes',
   ORCAMENTOS: 'super_orcamentos_orcamentos',
   FORNECEDORES: 'super_orcamentos_fornecedores',
+  NIVEIS_AR_FORNECEDOR: 'super_orcamentos_niveis_ar_fornecedor',
 }
 
 function getItem(key) {
@@ -115,6 +116,34 @@ export function addFornecedor(nome) {
   return fornecedores
 }
 
+// ========== NÍVEIS AR POR FORNECEDOR ==========
+export function getNiveisARFornecedor() {
+  return getItem(STORAGE_KEYS.NIVEIS_AR_FORNECEDOR)
+}
+
+export function getNiveisARByFornecedor(fornecedor) {
+  const todos = getNiveisARFornecedor()
+  return todos.find(n => n.fornecedor === fornecedor) || null
+}
+
+export function saveNiveisARFornecedor(fornecedor, niveis) {
+  const todos = getNiveisARFornecedor()
+  const existingIdx = todos.findIndex(n => n.fornecedor === fornecedor)
+  const entry = { fornecedor, niveis, updatedAt: new Date().toISOString() }
+  if (existingIdx >= 0) {
+    todos[existingIdx] = entry
+  } else {
+    todos.push(entry)
+  }
+  setItem(STORAGE_KEYS.NIVEIS_AR_FORNECEDOR, todos)
+  return entry
+}
+
+export function deleteNiveisARFornecedor(fornecedor) {
+  const todos = getNiveisARFornecedor().filter(n => n.fornecedor !== fornecedor)
+  setItem(STORAGE_KEYS.NIVEIS_AR_FORNECEDOR, todos)
+}
+
 // ========== HELPERS ==========
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9)
@@ -129,19 +158,24 @@ export function formatCurrency(value) {
 
 export function getAntiReflexoLabel(key) {
   const labels = {
+    // Zeiss
     'duravision_gold': 'Duravision Gold',
     'duravision_platinum': 'Duravision Platinum',
     'duravision_silver': 'Duravision Silver',
     'duravision_chrome': 'Duravision Chrome',
-    'sem_ar': 'Sem AR',
-    'crizal_sapphire': 'Crizal Sapphire',
-    'crizal_prevencia': 'Crizal Prevencia',
-    'crizal_easy': 'Crizal Easy',
+    // Essilor
+    'crizal_prevencia': 'Crizal Prevência',
+    'crizal_saphire_hr': 'Crizal Saphire HR',
     'crizal_rock': 'Crizal Rock',
+    'crizal_easy_pro': 'Crizal Easy Pro',
     'optifog': 'Optifog',
+    'trio_easy_clean': 'Trio Easy Clean',
+    'verniz_hc': 'Verniz HC',
+    // Genérico
+    'sem_ar': 'Sem AR',
     'outro': 'Outro',
   }
-  return labels[key] || key
+  return labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 export const TIPOS_LENTE = [
