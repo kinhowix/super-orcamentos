@@ -228,29 +228,23 @@ export default function NovoOrcamento() {
     handleSave('enviado')
 
     // Build WhatsApp message
-    let msg = `*Orçamento de Lentes*\n`
+    let msg = `*🔍 Orçamento de Lentes*\n`
     msg += `━━━━━━━━━━━━━━━━━━\n`
-    msg += `*Cliente:* ${cliente.nome.trim}\n\n`
+    msg += `*Cliente:* ${cliente.nome}\n\n`
 
     itens.forEach((item, idx) => {
       if (item.lenteName) {
-
-        // Uso do .trim() para garantir que o texto cole no asterisco
-        const nomeLente = item.lenteName.trim();
-        const antiReflexo = getAntiReflexoLabel(item.antirreflexo).trim();
-        const valor = formatCurrency(item.preco).trim();
-
-        msg += `*Opção ${idx + 1}:* ${item.lenteName}\n`
-        msg += `Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n`
-        msg += `Valor: ${formatCurrency(item.preco)}\n\n`
+        msg += `*📌 Opção ${idx + 1}:* ${item.lenteName}\n`
+        msg += `   Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n`
+        msg += `   Valor: ${formatCurrency(item.preco)}\n\n`
       }
     })
 
     msg += `━━━━━━━━━━━━━━━━━━\n`
-    msg += `*Total: ${formatCurrency(total).trim}*\n`
+    msg += `*💰 Total: ${formatCurrency(total)}*\n`
 
     if (observacoes) {
-      msg += `\n${observacoes.trim}\n`
+      msg += `\n📝 ${observacoes}\n`
     }
 
     const phone = cliente.telefone?.replace(/\D/g, '') || ''
