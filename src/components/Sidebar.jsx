@@ -8,6 +8,7 @@ import {
   List,
   ChevronLeft,
   ChevronRight,
+  X
 } from 'lucide-react'
 
 const navItems = [
@@ -33,15 +34,18 @@ const navItems = [
   },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen, closeMobile }) {
   const [collapsed, setCollapsed] = useState(false)
   const location = useLocation()
 
   return (
-    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-logo">SO</div>
         {!collapsed && <span className="sidebar-title">Super Orçamentos</span>}
+        <button className="mobile-close-btn" onClick={closeMobile}>
+          <X size={20} />
+        </button>
       </div>
 
       <button 
@@ -62,6 +66,7 @@ export default function Sidebar() {
               <NavLink
                 key={item.path}
                 to={item.path}
+                onClick={closeMobile}
                 className={({ isActive }) => 
                   `nav-item ${isActive ? 'active' : ''}`
                 }
