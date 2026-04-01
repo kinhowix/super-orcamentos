@@ -71,6 +71,15 @@ export default function NovoOrcamento() {
       Math.abs(parseFloat(item.olhoEsquerdo.adicao) || 0)
     )
 
+    // Filter type based on addition
+    if (ad === 0) {
+      // Se não tem adição, só permite visão simples
+      result = result.filter(l => l.tipo !== 'multifocal')
+    } else {
+      // Se tem adição, só permite multifocal
+      result = result.filter(l => l.tipo === 'multifocal')
+    }
+
     if (esf > 0 || cil > 0 || ad > 0) {
       result = result.filter(l => {
         const spec = l.especificacoes
@@ -219,23 +228,29 @@ export default function NovoOrcamento() {
     handleSave('enviado')
 
     // Build WhatsApp message
-    let msg = `*🔍 Orçamento de Lentes*\n`
+    let msg = `*Orçamento de Lentes*\n`
     msg += `━━━━━━━━━━━━━━━━━━\n`
-    msg += `*Cliente:* ${cliente.nome}\n\n`
+    msg += `*Cliente:* ${cliente.nome.trim}\n\n`
 
     itens.forEach((item, idx) => {
       if (item.lenteName) {
-        msg += `*📌 Opção ${idx + 1}:* ${item.lenteName}\n`
-        msg += `   Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n`
-        msg += `   Valor: ${formatCurrency(item.preco)}\n\n`
+
+        // Uso do .trim() para garantir que o texto cole no asterisco
+        const nomeLente = item.lenteName.trim();
+        const antiReflexo = getAntiReflexoLabel(item.antirreflexo).trim();
+        const valor = formatCurrency(item.preco).trim();
+
+        msg += `*Opção ${idx + 1}:* ${item.lenteName}\n`
+        msg += `Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n`
+        msg += `Valor: ${formatCurrency(item.preco)}\n\n`
       }
     })
 
     msg += `━━━━━━━━━━━━━━━━━━\n`
-    msg += `*💰 Total: ${formatCurrency(total)}*\n`
+    msg += `*Total: ${formatCurrency(total).trim}*\n`
 
     if (observacoes) {
-      msg += `\n📝 ${observacoes}\n`
+      msg += `\n${observacoes.trim}\n`
     }
 
     const phone = cliente.telefone?.replace(/\D/g, '') || ''
