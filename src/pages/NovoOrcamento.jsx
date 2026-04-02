@@ -29,7 +29,11 @@ export default function NovoOrcamento() {
   const [showLenteSelector, setShowLenteSelector] = useState(false)
 
   useEffect(() => {
-    setLentes(getLentes())
+    async function loadData() {
+      const data = await getLentes();
+      setLentes(data);
+    }
+    loadData();
   }, [])
 
   // Get available AR options for selected lens
@@ -191,7 +195,23 @@ export default function NovoOrcamento() {
 
   const total = itens.reduce((sum, item) => sum + (item.preco || 0), 0)
 
-  const handleSave = (status = 'pendente') => {
+  const maskPhone = (value) => {
+    if (!value) return ''
+    // Remove tudo que não é dígito
+    const digits = value.replace(/\D/g, '').substring(0, 11)
+    
+    // Aplica a máscara
+    if (digits.length <= 2) return digits
+    if (digits.length <= 7) return `(${digits.substring(0, 2)}) ${digits.substring(2)}`
+    return `(${digits.substring(0, 2)}) ${digits.substring(2, 7)}-${digits.substring(7, 11)}`
+  }
+
+  const handlePhoneChange = (e) => {
+    const formatted = maskPhone(e.target.value)
+    setCliente(prev => ({ ...prev, telefone: formatted }))
+  }
+
+  const handleSave = async (status = 'pendente') => {
     if (!cliente.nome) {
       toast.error('Informe o nome do cliente')
       return
@@ -208,7 +228,7 @@ export default function NovoOrcamento() {
       status,
     }
 
-    saveOrcamento(orcamento)
+    await saveOrcamento(orcamento)
     toast.success('Orçamento salvo com sucesso!')
 
     // Reset form
@@ -218,41 +238,36 @@ export default function NovoOrcamento() {
     setActiveItemIdx(0)
   }
 
-  const handleSendWhatsApp = () => {
+  const handleSendWhatsApp = async () => {
     if (!cliente.nome) {
       toast.error('Informe o nome do cliente')
       return
     }
 
     // Save first
-    handleSave('enviado')
+    await handleSave('enviado')
 
     // Build WhatsApp message
-    let msg = `*Orçamento de Lentes*\n`
+    let msg = `*🔍 Orçamento de Lentes*\n`
     msg += `━━━━━━━━━━━━━━━━━━\n`
-    msg += `*Cliente:* ${cliente.nome.trim}\n\n`
+    msg += `*Cliente:* ${cliente.nome}\n\n`
 
     itens.forEach((item, idx) => {
       if (item.lenteName) {
-
-        // Uso do .trim() para garantir que o texto cole no asterisco
-        const nomeLente = item.lenteName.trim();
-        const antiReflexo = getAntiReflexoLabel(item.antirreflexo).trim();
-        const valor = formatCurrency(item.preco).trim();
-
-        msg += `*Opção ${idx + 1}:* ${item.lenteName}\n`
-        msg += `Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n`
-        msg += `Valor: ${formatCurrency(item.preco)}\n\n`
+        msg += `*📌 Opção ${idx + 1}:* ${item.lenteName}\n`
+        msg += `   Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n`
+        msg += `   Valor: ${formatCurrency(item.preco)}\n\n`
       }
     })
 
     msg += `━━━━━━━━━━━━━━━━━━\n`
-    msg += `*Total: ${formatCurrency(total).trim}*\n`
+    msg += `*💰 Total: ${formatCurrency(total)}*\n`
 
     if (observacoes) {
-      msg += `\n${observacoes.trim}\n`
+      msg += `\n📝 ${observacoes}\n`
     }
 
+    // Clean phone number for URL
     const phone = cliente.telefone?.replace(/\D/g, '') || ''
     const url = phone
       ? `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`
@@ -292,7 +307,8 @@ export default function NovoOrcamento() {
                   className="form-input"
                   placeholder="(00) 00000-0000"
                   value={cliente.telefone}
-                  onChange={e => setCliente(prev => ({ ...prev, telefone: e.target.value }))}
+                  onChange={handlePhoneChange}
+                  maxLength={15} // (XX) XXXXX-XXXX = 15 chars
                 />
               </div>
             </div>

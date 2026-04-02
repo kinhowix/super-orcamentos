@@ -15,7 +15,7 @@ const navItems = [
   {
     section: 'Principal',
     items: [
-      { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+      { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     ]
   },
   {
@@ -34,8 +34,9 @@ const navItems = [
   },
 ]
 
-export default function Sidebar({ mobileOpen, closeMobile }) {
-  const [collapsed, setCollapsed] = useState(false)
+import { LogOut } from 'lucide-react'
+
+export default function Sidebar({ mobileOpen, closeMobile, onLogout, userEmail, collapsed, setCollapsed }) {
   const location = useLocation()
 
   return (
@@ -70,7 +71,7 @@ export default function Sidebar({ mobileOpen, closeMobile }) {
                 className={({ isActive }) => 
                   `nav-item ${isActive ? 'active' : ''}`
                 }
-                end={item.path === '/'}
+                end={item.path === '/dashboard'}
                 title={collapsed ? item.label : undefined}
               >
                 <span className="nav-item-icon">
@@ -82,6 +83,25 @@ export default function Sidebar({ mobileOpen, closeMobile }) {
           </div>
         ))}
       </nav>
+
+      {/* Footer / Logout */}
+      <div className="sidebar-footer mt-auto p-4 border-t border-gray-100">
+        {!collapsed && userEmail && (
+          <div className="text-xs text-gray-500 mb-2 truncate px-2" title={userEmail}>
+            {userEmail}
+          </div>
+        )}
+        <button 
+          onClick={onLogout}
+          className="nav-item text-red-600 hover:bg-red-50 w-full flex items-center mb-0 mt-0 bg-transparent border-0 cursor-pointer"
+          title={collapsed ? 'Sair' : undefined}
+        >
+          <span className="nav-item-icon text-red-600">
+            <LogOut size={20} />
+          </span>
+          {!collapsed && <span>Sair</span>}
+        </button>
+      </div>
     </aside>
   )
 }

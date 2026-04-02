@@ -1,159 +1,155 @@
-// Data Store using localStorage (can be migrated to Firebase later)
-const STORAGE_KEYS = {
-  LENTES: 'super_orcamentos_lentes',
-  ORCAMENTOS: 'super_orcamentos_orcamentos',
-  FORNECEDORES: 'super_orcamentos_fornecedores',
-  NIVEIS_AR_FORNECEDOR: 'super_orcamentos_niveis_ar_fornecedor',
-}
+import { collection, getDocs, doc, setDoc, addDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { db } from './firebase';
 
-function getItem(key) {
-  try {
-    const data = localStorage.getItem(key)
-    return data ? JSON.parse(data) : []
-  } catch {
-    return []
-  }
-}
-
-function setItem(key, data) {
-  localStorage.setItem(key, JSON.stringify(data))
-}
+const COLLECTIONS = {
+  LENTES: 'lentes',
+  ORCAMENTOS: 'orcamentos',
+  FORNECEDORES: 'fornecedores',
+  NIVEIS_AR_FORNECEDOR: 'niveis_ar_fornecedor',
+};
 
 // ========== LENTES ==========
-export function getLentes() {
-  return getItem(STORAGE_KEYS.LENTES)
+export async function getLentes() {
+  const snapshot = await getDocs(collection(db, COLLECTIONS.LENTES));
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-export function getLenteById(id) {
-  const lentes = getLentes()
-  return lentes.find(l => l.id === id)
+export async function getLenteById(id) {
+  // Can be optimized with getDoc, but standardizing for now
+  const all = await getLentes();
+  return all.find(l => l.id === id);
 }
 
-export function saveLente(lente) {
-  const lentes = getLentes()
+export async function saveLente(lente) {
   if (lente.id) {
-    const index = lentes.findIndex(l => l.id === lente.id)
-    if (index >= 0) {
-      lentes[index] = { ...lente, updatedAt: new Date().toISOString() }
-    }
+    const ref = doc(db, COLLECTIONS.LENTES, lente.id);
+    await updateDoc(ref, { ...lente, updatedAt: new Date().toISOString() });
+    return lente;
   } else {
-    lente.id = generateId()
-    lente.createdAt = new Date().toISOString()
-    lente.updatedAt = new Date().toISOString()
-    lentes.push(lente)
+    const dataToSave = {
+      ...lente,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    const docRef = await addDoc(collection(db, COLLECTIONS.LENTES), dataToSave);
+    return { ...dataToSave, id: docRef.id };
   }
-  setItem(STORAGE_KEYS.LENTES, lentes)
-  return lente
 }
 
-export function saveLentesEmLote(lentesArray) {
-  const lentes = getLentes()
-  const now = new Date().toISOString()
-  const novasLentes = lentesArray.map(l => ({
-    ...l,
-    id: generateId(),
-    createdAt: now,
-    updatedAt: now,
-  }))
-  setItem(STORAGE_KEYS.LENTES, [...lentes, ...novasLentes])
-  return novasLentes
+export async function saveLentesEmLote(lentesArray) {
+  const now = new Date().toISOString();
+  const promises = lentesArray.map(async (l) => {
+    const data = { ...l, createdAt: now, updatedAt: now };
+    const docRef = await addDoc(collection(db, COLLECTIONS.LENTES), data);
+    return { ...data, id: docRef.id };
+  });
+  return Promise.all(promises);
 }
 
-export function deleteLente(id) {
-  const lentes = getLentes().filter(l => l.id !== id)
-  setItem(STORAGE_KEYS.LENTES, lentes)
+export async function deleteLente(id) {
+  const ref = doc(db, COLLECTIONS.LENTES, id);
+  await deleteDoc(ref);
 }
 
 // ========== ORÇAMENTOS ==========
-export function getOrcamentos() {
-  return getItem(STORAGE_KEYS.ORCAMENTOS)
+export async function getOrcamentos() {
+  const snapshot = await getDocs(collection(db, COLLECTIONS.ORCAMENTOS));
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-export function getOrcamentoById(id) {
-  const orcamentos = getOrcamentos()
-  return orcamentos.find(o => o.id === id)
+export async function getOrcamentoById(id) {
+  const all = await getOrcamentos();
+  return all.find(o => o.id === id);
 }
 
-export function saveOrcamento(orcamento) {
-  const orcamentos = getOrcamentos()
+export async function saveOrcamento(orcamento) {
   if (orcamento.id) {
-    const index = orcamentos.findIndex(o => o.id === orcamento.id)
-    if (index >= 0) {
-      orcamentos[index] = { ...orcamento, updatedAt: new Date().toISOString() }
-    }
+    const ref = doc(db, COLLECTIONS.ORCAMENTOS, orcamento.id);
+    await updateDoc(ref, { ...orcamento, updatedAt: new Date().toISOString() });
+    return orcamento;
   } else {
-    orcamento.id = generateId()
-    orcamento.createdAt = new Date().toISOString()
-    orcamento.updatedAt = new Date().toISOString()
-    orcamentos.push(orcamento)
+    const dataToSave = {
+      ...orcamento,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    const docRef = await addDoc(collection(db, COLLECTIONS.ORCAMENTOS), dataToSave);
+    return { ...dataToSave, id: docRef.id };
   }
-  setItem(STORAGE_KEYS.ORCAMENTOS, orcamentos)
-  return orcamento
 }
 
-export function deleteOrcamento(id) {
-  const orcamentos = getOrcamentos().filter(o => o.id !== id)
-  setItem(STORAGE_KEYS.ORCAMENTOS, orcamentos)
+export async function deleteOrcamento(id) {
+  const ref = doc(db, COLLECTIONS.ORCAMENTOS, id);
+  await deleteDoc(ref);
 }
 
 // ========== FORNECEDORES ==========
-export function getFornecedores() {
-  const defaultFornecedores = ['Zeiss', 'Essilor', 'Hoya', 'Tokai', 'Shamir', 'Rodenstock']
-  const saved = getItem(STORAGE_KEYS.FORNECEDORES)
+export async function getFornecedores() {
+  const snapshot = await getDocs(collection(db, COLLECTIONS.FORNECEDORES));
+  const saved = snapshot.docs.map(doc => doc.data().nome);
+  
   if (saved.length === 0) {
-    setItem(STORAGE_KEYS.FORNECEDORES, defaultFornecedores)
-    return defaultFornecedores
+    const defaultFornecedores = ['Zeiss', 'Essilor', 'Hoya', 'Tokai', 'Shamir', 'Rodenstock'];
+    for (const nome of defaultFornecedores) {
+      await addDoc(collection(db, COLLECTIONS.FORNECEDORES), { nome });
+    }
+    return defaultFornecedores;
   }
-  return saved
+  return saved;
 }
 
-export function addFornecedor(nome) {
-  const fornecedores = getFornecedores()
-  if (!fornecedores.includes(nome)) {
-    fornecedores.push(nome)
-    setItem(STORAGE_KEYS.FORNECEDORES, fornecedores)
+export async function addFornecedor(nome) {
+  const current = await getFornecedores();
+  if (!current.includes(nome)) {
+    await addDoc(collection(db, COLLECTIONS.FORNECEDORES), { nome });
+    current.push(nome);
   }
-  return fornecedores
+  return current;
 }
 
 // ========== NÍVEIS AR POR FORNECEDOR ==========
-export function getNiveisARFornecedor() {
-  return getItem(STORAGE_KEYS.NIVEIS_AR_FORNECEDOR)
+export async function getNiveisARFornecedor() {
+  const snapshot = await getDocs(collection(db, COLLECTIONS.NIVEIS_AR_FORNECEDOR));
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-export function getNiveisARByFornecedor(fornecedor) {
-  const todos = getNiveisARFornecedor()
-  return todos.find(n => n.fornecedor === fornecedor) || null
+export async function getNiveisARByFornecedor(fornecedor) {
+  const q = query(
+    collection(db, COLLECTIONS.NIVEIS_AR_FORNECEDOR), 
+    where("fornecedor", "==", fornecedor)
+  );
+  const snapshot = await getDocs(q);
+  if (snapshot.empty) return null;
+  return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
 }
 
-export function saveNiveisARFornecedor(fornecedor, niveis) {
-  const todos = getNiveisARFornecedor()
-  const existingIdx = todos.findIndex(n => n.fornecedor === fornecedor)
-  const entry = { fornecedor, niveis, updatedAt: new Date().toISOString() }
-  if (existingIdx >= 0) {
-    todos[existingIdx] = entry
+export async function saveNiveisARFornecedor(fornecedor, niveis) {
+  const existing = await getNiveisARByFornecedor(fornecedor);
+  const data = { fornecedor, niveis, updatedAt: new Date().toISOString() };
+  
+  if (existing) {
+    const ref = doc(db, COLLECTIONS.NIVEIS_AR_FORNECEDOR, existing.id);
+    await updateDoc(ref, data);
+    return { ...data, id: existing.id };
   } else {
-    todos.push(entry)
+    const docRef = await addDoc(collection(db, COLLECTIONS.NIVEIS_AR_FORNECEDOR), data);
+    return { ...data, id: docRef.id };
   }
-  setItem(STORAGE_KEYS.NIVEIS_AR_FORNECEDOR, todos)
-  return entry
 }
 
-export function deleteNiveisARFornecedor(fornecedor) {
-  const todos = getNiveisARFornecedor().filter(n => n.fornecedor !== fornecedor)
-  setItem(STORAGE_KEYS.NIVEIS_AR_FORNECEDOR, todos)
+export async function deleteNiveisARFornecedor(fornecedor) {
+  const existing = await getNiveisARByFornecedor(fornecedor);
+  if (existing) {
+    await deleteDoc(doc(db, COLLECTIONS.NIVEIS_AR_FORNECEDOR, existing.id));
+  }
 }
 
 // ========== HELPERS ==========
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2, 9)
-}
-
 export function formatCurrency(value) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
-  }).format(value)
+  }).format(value);
 }
 
 export function getAntiReflexoLabel(key) {
@@ -174,14 +170,14 @@ export function getAntiReflexoLabel(key) {
     // Genérico
     'sem_ar': 'Sem AR',
     'outro': 'Outro',
-  }
-  return labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  };
+  return labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 export const TIPOS_LENTE = [
   { value: 'multifocal', label: 'Multifocal' },
   { value: 'visao_simples', label: 'Visão Simples' },
-]
+];
 
 export const NIVEIS_AR = [
   'duravision_gold',
@@ -189,4 +185,4 @@ export const NIVEIS_AR = [
   'duravision_silver',
   'duravision_chrome',
   'sem_ar',
-]
+];

@@ -42,10 +42,10 @@ const EMPTY_INDICE = {
   precos: {}
 }
 
-// Retorna os níveis de AR para um fornecedor (do storage ou predefinido)
-function resolveNiveisAR(fornecedor) {
+// Retorna os níveis de AR para um fornecedor (do config)
+function resolveNiveisAR(fornecedor, config = []) {
   if (!fornecedor) return AR_FALLBACK.map(n => n.key)
-  const saved = getNiveisARByFornecedor(fornecedor)
+  const saved = config.find(c => c.fornecedor === fornecedor)
   if (saved) return saved.niveis
   // Tenta predefinido
   const pre = AR_PREDEFINIDOS[fornecedor]
@@ -106,13 +106,16 @@ export default function CadastroLentes() {
   const [novoAREditLabel, setNovoAREditLabel] = useState('')
 
   useEffect(() => {
-    setFornecedores(getFornecedores())
-    setNiveisARConfig(getNiveisARFornecedor())
+    async function loadConfig() {
+      setFornecedores(await getFornecedores())
+      setNiveisARConfig(await getNiveisARFornecedor())
+    }
+    loadConfig()
   }, [])
 
   // ========== AR Levels Management ==========
   const getAllARLevels = () => {
-    const base = resolveNiveisAR(lente.fornecedor)
+    const base = resolveNiveisAR(lente.fornecedor, niveisARConfig)
     return [...new Set([...base, ...customAR])]
   }
 
@@ -122,7 +125,7 @@ export default function CadastroLentes() {
 
   // Quando o fornecedor muda no manual form, auto-carrega os níveis de AR
   const handleFornecedorChange = (value) => {
-    const niveis = resolveNiveisAR(value)
+    const niveis = resolveNiveisAR(value, niveisARConfig)
     setLente(prev => ({
       ...prev,
       fornecedor: value,
@@ -133,7 +136,7 @@ export default function CadastroLentes() {
 
   // Quando o fornecedor muda no lote, auto-carrega
   const handleLoteFornecedorChange = (value) => {
-    const niveis = resolveNiveisAR(value)
+    const niveis = resolveNiveisAR(value, niveisARConfig)
     setLoteFornecedor(value)
     setLoteARColumns(niveis)
   }
@@ -211,9 +214,9 @@ export default function CadastroLentes() {
     })
   }
 
-  const handleAddFornecedor = () => {
+  const handleAddFornecedor = async () => {
     if (novoFornecedor.trim()) {
-      const updated = addFornecedor(novoFornecedor.trim())
+      const updated = await addFornecedor(novoFornecedor.trim())
       setFornecedores(updated)
       handleFornecedorChange(novoFornecedor.trim())
       setNovoFornecedor('')
@@ -221,7 +224,7 @@ export default function CadastroLentes() {
     }
   }
 
-  const handleSaveManual = () => {
+  const handleSaveManual = async () => {
     if (!lente.fornecedor) {
       toast.error('Selecione um fornecedor')
       return
@@ -254,7 +257,7 @@ export default function CadastroLentes() {
       }
     }))
 
-    saveLentesEmLote(lentesParaSalvar)
+    await saveLentesEmLote(lentesParaSalvar)
     toast.success(`${lentesParaSalvar.length} lente(s) cadastrada(s) com sucesso!`)
     setLente({ ...EMPTY_LENTE })
   }
@@ -383,7 +386,7 @@ export default function CadastroLentes() {
     )
   }
 
-  const handleSaveLote = () => {
+  const handleSaveLote = async () => {
     if (!loteFornecedor) {
       toast.error('Selecione um fornecedor')
       return
@@ -422,7 +425,7 @@ export default function CadastroLentes() {
       return
     }
 
-    saveLentesEmLote(lentesParaSalvar)
+    await saveLentesEmLote(lentesParaSalvar)
     toast.success(`${lentesParaSalvar.length} lente(s) cadastrada(s) com sucesso!`)
     setLoteLentes([createEmptyLoteLente()])
     setLoteNome('')
@@ -431,7 +434,7 @@ export default function CadastroLentes() {
   // ========== Níveis AR por Fornecedor Handlers ==========
   const handleSelectAREdit = (fornecedor) => {
     setArEditFornecedor(fornecedor)
-    const saved = getNiveisARByFornecedor(fornecedor)
+    const saved = niveisARConfig.find(c => c.fornecedor === fornecedor)
     if (saved) {
       setArEditNiveis(saved.niveis.map(key => ({ key, label: getAntiReflexoLabel(key) })))
     } else if (AR_PREDEFINIDOS[fornecedor]) {
@@ -470,7 +473,7 @@ export default function CadastroLentes() {
     })
   }
 
-  const handleSaveAREdit = () => {
+  const handleSaveAREdit = async () => {
     if (!arEditFornecedor) {
       toast.error('Selecione um fornecedor')
       return
@@ -479,14 +482,14 @@ export default function CadastroLentes() {
       toast.error('Adicione pelo menos um nível de AR')
       return
     }
-    saveNiveisARFornecedor(arEditFornecedor, arEditNiveis.map(n => n.key))
-    setNiveisARConfig(getNiveisARFornecedor())
+    await saveNiveisARFornecedor(arEditFornecedor, arEditNiveis.map(n => n.key))
+    setNiveisARConfig(await getNiveisARFornecedor())
     toast.success(`Níveis de AR da ${arEditFornecedor} salvos com sucesso!`)
   }
 
-  const handleDeleteARConfig = (fornecedor) => {
-    deleteNiveisARFornecedor(fornecedor)
-    setNiveisARConfig(getNiveisARFornecedor())
+  const handleDeleteARConfig = async (fornecedor) => {
+    await deleteNiveisARFornecedor(fornecedor)
+    setNiveisARConfig(await getNiveisARFornecedor())
     if (arEditFornecedor === fornecedor) {
       setArEditFornecedor('')
       setArEditNiveis([])
@@ -595,7 +598,7 @@ export default function CadastroLentes() {
           onRemoveRow={removeLoteRow}
           onSave={handleSaveLote}
           getARLabel={getARLabel}
-          getAllARLevels={() => resolveNiveisAR(loteFornecedor)}
+          getAllARLevels={() => resolveNiveisAR(loteFornecedor, niveisARConfig)}
         />
       )}
 

@@ -12,8 +12,13 @@ export default function Dashboard() {
   const [orcamentos, setOrcamentos] = useState([])
 
   useEffect(() => {
-    setLentes(getLentes())
-    setOrcamentos(getOrcamentos())
+    async function loadData() {
+      const lentesData = await getLentes();
+      const orcamentosData = await getOrcamentos();
+      setLentes(lentesData);
+      setOrcamentos(orcamentosData);
+    }
+    loadData();
   }, [])
 
   const totalOrcamentos = orcamentos.length
@@ -73,7 +78,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+      <div className="content-grid">
         {/* Ações Rápidas */}
         <div className="card">
           <div className="card-header">
