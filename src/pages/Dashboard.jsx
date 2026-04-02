@@ -73,7 +73,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+      <div className="content-grid">
         {/* Ações Rápidas */}
         <div className="card">
           <div className="card-header">

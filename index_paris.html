@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+      <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-J802VB7KPB"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="assets/imagens/favicon.ico" type="image/x-icon">
+    
+    <title>Óticas Paris Sul - Sua visão em primeiro lugar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+.logo-paris{
+    margin: 0;
+    height: 150px;
+    width: 150px;
+}
+
+
+        .hero-gradient {
+            background: linear-gradient(135deg, rgba(15, 54, 96, 0.9) 0%, rgba(48, 104, 153, 0.8) 100%);
+        }
+        .menu-item {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .menu-item:after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: 0;
+            left: 0;
+            background-color: #3b82f6;
+            transition: width 0.3s ease;
+        }
+        .menu-item:hover:after {
+            width: 100%;
+        }
+        .brand-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+        @keyframes floating {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+    </style>
+</head>
+<body class="font-sans bg-gray-50">
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <h1 style="font-size: 1.5rem; font-weight: bold; color: #2e1e60;">
+                    Óticas <span style="color: #2e1e60;">Paris Sul</span>
+                </h1>
+            </div>
+
+            <!-- Menu Desktop -->
+            <nav class="hidden md:flex space-x-8">
+                <a href="#home" class="menu-item text-gray-700 font-medium hover:text-blue-500">Início</a>
+                <a href="#services" class="menu-item text-gray-700 font-medium hover:text-blue-500">Serviços</a>
+                <a href="#brands" class="menu-item text-gray-700 font-medium hover:text-blue-500">Marcas</a>
+                <a href="#contact" class="menu-item text-gray-700 font-medium hover:text-blue-500">Contato</a>
+                <a href="#order" class="menu-item text-gray-700 font-medium hover:text-blue-500">Encontre Seu Pedido</a>
+                <a href="#restrict" class="menu-item text-gray-700 font-medium hover:text-blue-500">Área Restrita</a>
+            </nav>
+
+            <!-- Botão do Menu Mobile -->
+            <button id="menu-toggle" class="md:hidden text-gray-700 focus:outline-none z-50">
+                <i id="menu-icon" class="fas fa-bars text-2xl"></i>
+            </button>
+        </div>
+
+        <!-- Menu Mobile -->
+        <nav id="mobile-menu" class="md:hidden overflow-hidden max-h-0 transition-all duration-500 ease-in-out bg-white px-4 shadow-md">
+            <a href="#home" class="block py-2 text-gray-700 font-medium hover:text-blue-500">Início</a>
+            <a href="#services" class="block py-2 text-gray-700 font-medium hover:text-blue-500">Serviços</a>
+            <a href="#brands" class="block py-2 text-gray-700 font-medium hover:text-blue-500">Marcas</a>
+            <a href="#contact" class="block py-2 text-gray-700 font-medium hover:text-blue-500">Contato</a>
+            <a href="#order" class="block py-2 text-gray-700 font-medium hover:text-blue-500">Encontre Seu Pedido</a>
+            <a href="#restrict" class="block py-2 text-gray-700 font-medium hover:text-blue-500">Área Restrita</a>
+        </nav>
+    </header>
+
+    <!-- Script -->
+    <script>
+        const toggleBtn = document.getElementById('menu-toggle');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const menuIcon = document.getElementById('menu-icon');
+
+        let isOpen = false;
+
+        // Alterna o menu
+        toggleBtn.addEventListener('click', () => {
+            if (isOpen) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        });
+
+        // Função para abrir
+        function openMenu() {
+            mobileMenu.style.maxHeight = mobileMenu.scrollHeight + "px";
+            menuIcon.classList.remove('fa-bars');
+            menuIcon.classList.add('fa-times');
+            isOpen = true;
+        }
+
+        // Função para fechar
+        function closeMenu() {
+            mobileMenu.style.maxHeight = '0px';
+            menuIcon.classList.remove('fa-times');
+            menuIcon.classList.add('fa-bars');
+            isOpen = false;
+        }
+
+        // Fecha ao clicar fora do menu
+        document.addEventListener('click', function(event) {
+            const isClickInside = mobileMenu.contains(event.target) || toggleBtn.contains(event.target);
+            if (!isClickInside && isOpen) {
+                closeMenu();
+            }
+        });
+
+        // Fecha ao clicar em um link
+        document.querySelectorAll('#mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                closeMenu();
+            });
+        });
+    </script>
+</body>
+
+
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="home" class="scroll-mt-10 hero-gradient text-white py-40">
+        <div class="container mx-auto px-4 flex flex-col md:flex-row items-center">
+            <div class="md:w-1/2 mb-10 md:mb-0">
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">Sua visão merece o melhor cuidado</h2>
+                <p class="text-xl mb-8">Na Óticas Paris Sul, combinamos tecnologia de ponta com atendimento personalizado para oferecer a melhor experiência em saúde ocular.</p>
+                <div class="flex flex-wrap gap-4">
+                  
+                    <a href="#order" class="border-2 border-white text-white px-6 py-3 rounded-full font-semibold hover:bg-white hover:text-blue-600 transition duration-300">Encontre seu pedido</a>
+                </div>
+            </div>
+            <div class="md:w-1/2 flex justify-center">
+                <img src="./assets/imagens/cartão_de_visitas .png" alt="Óculos de qualidade" class="rounded-lg shadow-2xl max-w-md w-full floating">
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services" class="scroll-mt-10 py-16 bg-white">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-12 text-gray-800">Nossos <span class="text-blue-500">Serviços</span></h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div class="bg-gray-50 p-8 rounded-xl shadow-md hover:shadow-lg transition duration-300">
+                    <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-eye text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">Lentes Especiais</h3>
+                    <p class="text-gray-600">Lentes fotossensíveis, anti-reflexo, blue light e até lentes de contato para melhorar sua visão.</p>
+                </div>
+                
+                <div class="bg-gray-50 p-8 rounded-xl shadow-md hover:shadow-lg transition duration-300">
+                    <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-glasses text-green-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">Armações Exclusivas</h3>
+                    <p class="text-gray-600">Oferecemos uma ampla seleção de armações das melhores marcas para todos os estilos e necessidades.</p>
+                </div>
+                
+                <div class="bg-gray-50 p-8 rounded-xl shadow-md hover:shadow-lg transition duration-300">
+                    <div class="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-user text-yellow-600 text-3x1"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">Montagens em suas armações</h3>
+                    <p class="text-grey-600">Podemos colacar as melhores lentes em armações que você possua.</p>
+                </div>
+
+                <div class="bg-gray-50 p-8 rounded-xl shadow-md hover:shadow-lg transition duration-300">
+                    <div class="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-bolt text-red-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">Gravações</h3>
+                    <p class="text-gray-600">Personalizamos canetas e outros itens com gravações a lazer.</p>
+                </div>
+
+
+
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Brands Section -->
+    <section id="brands" class="scroll-mt-10 py-16 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-12 text-gray-800">Nossas <span class="text-blue-500">Marcas</span></h2>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div class="brand-card bg-white p-10 rounded-lg shadow-md flex items-center justify-center h-32 transition duration-300">
+                    <img src="./assets/imagens/Carmim.png" alt="Carmim" class="h-32 object-contain">
+                </div>
+                <div class="brand-card bg-white p-6 rounded-lg shadow-md flex items-center justify-center h-32 transition duration-300">
+                    <img src="./assets/imagens/Rayban.png" alt="Rayban" class="h-32 object-contain">
+                </div>
+                <div class="brand-card bg-white p-6 rounded-lg shadow-md flex items-center justify-center h-32 transition duration-300">
+                    <img src="./assets/imagens/technos.png" alt="Technos" class="h-32 object-contain">
+                </div>
+                <div class="brand-card bg-white p-6 rounded-lg shadow-md flex items-center justify-center h-32 transition duration-300">
+                    <img src="./assets/imagens/colcci.png" alt="Colcci" class="h-32 object-contain">
+                </div>
+                <div class="brand-card bg-white p-6 rounded-lg shadow-md flex items-center justify-center h-32 transition duration-300">
+                    <img src="./assets/imagens/Next.png" alt="Next" class="h-32 object-contain">
+                </div>
+                <div class="brand-card bg-white p-6 rounded-lg shadow-md flex items-center justify-center h-32 transition duration-300">
+                    <img src="./assets/imagens/Orient.png" alt="Orient" class="h-32 object-contain">
+                </div>
+                <div class="brand-card bg-white p-6 rounded-lg shadow-md flex items-center justify-center h-32 transition duration-300">
+                    <img src="./assets/imagens/Mormaii.png" alt="Mormaii" class="h-32 object-contain">
+                </div>
+                <div class="brand-card bg-white p-6 rounded-lg shadow-md flex items-center justify-center h-32 transition duration-300">
+                    <img src="./imagens/ecko.png" alt="Ecko" class="h-28 object-contain">
+                </div>
+            </div>
+            
+            
+        </div>
+    </section>
+
+    <!-- Find Your Order Section -->
+    <section id="order" class="scroll-mt-10 py-16 bg-blue-50">
+        <div class="container mx-auto px-4">
+            <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="md:flex">
+                    <div class="md:w-1/2 bg-blue-500 p-8 text-white flex flex-col justify-center">
+                        <h2 class="text-3xl font-bold mb-4">Encontre Seu Pedido</h2>
+                        <p class="mb-6">Digite o número do seu pedido para acompanhar o status de entrega e produção.</p>
+                        <div class="flex items-center">
+                            
+                           
+                        </div>
+                    </div>
+                    <div class="md:w-1/2 p-8">
+                        <form id="form-pedido">
+                      
+                            <div class="mb-6">
+                                <label for="order-number" class="block text-gray-700 font-medium mb-2">Número do Pedido</label>
+                                <input type="text" id="order-number" name="os" placeholder="Ex: letras e números" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div class="mb-6">
+                                <label for="email" class="block text-gray-700 font-medium mb-2"></label>
+                                
+                            </div>
+                            <button type="submit" class="w-full bg-blue-500 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-600 transition duration-300">
+                                Acompanhar Pedido
+                            </button>
+                        </form>
+                        <!-- Resultado será exibido aqui -->
+                      
+                        <div class="container mx-auto px-4" id="resultado" class="mt-6"></div>
+
+
+<!-- Botão de limpar -->
+<button id="limpar-btn"
+    class="w-full mt-4 bg-gray-500 text-white py-3 px-6 rounded-lg font-semibold hover:bg-gray-600 transition duration-300 hidden">
+    Limpar Consulta
+</button>
+
+
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+   
+
+
+
+    <!-- Contact Section -->
+    <section id="contact" class="scroll-mt-10 py-16 bg-white">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-12 text-gray-800">Entre em <span class="text-blue-500">Contato</span></h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-6xl mx-auto">
+                <div>
+                    <h3 class="text-xl font-semibold mb-6 text-gray-800">Oticas Paris Sul - Matriz</h3>
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-start">
+                            <div class="bg-blue-100 p-3 rounded-full mr-4 w-10 h-10 flex items-center justify-center">
+                                <i class="fas fa-map-marker-alt text-blue-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-800">Endereços</h4>
+                                <p class="text-gray-600">Rua Primeiro de Março, 127 - S. Leopoldo</p>
+                                
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-green-100 p-3 rounded-full mr-4 w-10 h-10 flex items-center justify-center">
+                                <i class="fas fa-phone-alt text-green-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-800">Telefones</h4>
+                                <p class="text-gray-600">(51) 3591-3664 </p>
+                               <a href="https://api.whatsapp.com/send?phone=5551991706048&text=*Olá Óticas Paris Sul*" target="_blank">(51) 99170-6048 (WhatsApp) - <i class="fas fa-thin fa-message text-green-600"></i></a>
+                               
+                                
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-purple-100 p-3 rounded-full mr-4 w-10 h-10 flex items-center justify-center">
+                                <i class="fas fa-envelope text-purple-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-800">E-mail</h4>
+                                <p class="text-gray-600">contato@oticasparissul.com.br</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-yellow-100 p-3 rounded-full mr-4 w-10 h-10 flex items-center justify-center">
+                                <i class="fas fa-clock text-yellow-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-800">Horário de Funcionamento</h4>
+                                <p class="text-gray-600">Segunda a Sexta: 9h às 18h</p>
+                                <p class="text-gray-600">Sábado: 9h às 13h - Loja da Primeiro de Março</p>
+                               
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8">
+                        <h4 class="font-medium text-gray-800 mb-4">Acesse o nosso Intagram</h4>
+                        <div class="flex space-x-2">
+                            
+                            
+                            <a href="https://www.instagram.com/oticasparissul" target="_blank" class="bg-pink-600 text-white p-3 rounded-full w-10 h-10 flex items-center justify-center hover:bg-pink-700 transition duration-300">
+                                <i class="fab fa-instagram"></i>
+                            </a>
+                            
+                            </a>
+                        </div>
+                </div>
+            </div>
+                
+
+        <div class="container mx-auto px-4">
+            
+            <div class="grid grid-cols-1 md:grid-cols-1 gap-12 max-w-6xl mx-auto">
+                <div>
+                    <h3 class="text-xl font-semibold mb-6 text-gray-800">Oticas Paris Sul - Filial 01</h3>
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-start">
+                            <div class="bg-blue-100 p-3 rounded-full mr-4 w-10 h-10 flex items-center justify-center">
+                                <i class="fas fa-map-marker-alt text-blue-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-800">Endereços</h4>
+                                
+                                <p class="text-gray-600">Rua Independência, 961 - S. Leopoldo</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-green-100 p-3 rounded-full mr-4 w-10 h-10 flex items-center justify-center">
+                                <i class="fas fa-phone-alt text-green-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-800">Telefones</h4>
+                               
+                                <p class="text-gray-600">(51) 3037-2600 - Filial 01</p>
+                                <a href="https://api.whatsapp.com/send?phone=5551993248789&text=*Olá Óticas Paris Sul*" target="_blank">(51) 99324-8789 (WhatsApp) - <i class="fas fa-thin fa-message text-green-600"></i></a>
+                                
+                                
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-purple-100 p-3 rounded-full mr-4 w-10 h-10 flex items-center justify-center">
+                                <i class="fas fa-envelope text-purple-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-800">E-mail</h4>
+                                <p class="text-gray-600">parisadm2@oticasparissul.com.br</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-yellow-100 p-3 rounded-full mr-4 w-10 h-10 flex items-center justify-center">
+                                <i class="fas fa-clock text-yellow-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-800">Horário de Funcionamento</h4>
+                                <p class="text-gray-600">Segunda a Sexta: 9h às 18h</p>
+                               
+                                <p class="text-gray-600">Sábado: 9h às 16:30h - Loja da Independência</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8">
+                        
+                        </div>
+                    </div>
+                </div>
+    
+    </section>
+
+    <!-- Footer -->
+     <section id="restrict" class="scroll-mt-10 py-16 bg-white">
+    <footer class="bg-gray-800 text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i class="fas fa-glasses text-2xl text-blue-400"></i>
+                        <h3 class="text-xl font-bold">Óticas Paris Sul </h3>
+                    </div>
+                    <p class="text-gray-400">Cuidando da sua visão desde 2002, oferecendo os melhores produtos e serviços em saúde ocular.</p>
+                </div>
+                
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Links Rápidos</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#home" class="text-gray-400 hover:text-white transition duration-300">Início</a></li>
+                        <li><a href="#services" class="text-gray-400 hover:text-white transition duration-300">Serviços</a></li>
+                        <li><a href="#brands" class="text-gray-400 hover:text-white transition duration-300">Marcas</a></li>
+                        <li><a href="https://mailpro.uol.com.br/oticasparissul.com.br/" target="_blank" class="text-gray-400 hover:text-white transition duration-300">Webmail</a></li>
+                        <li><a href="login.php" target="_blank" class="text-gray-400 hover:text-white transition duration-300">Area Restrita</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Horário de Funcionamento</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li class="flex justify-between">
+                            <span>Segunda - Sexta</span>
+                            <span>9h - 18:30h</span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span>Sábado na Matriz</span>
+                            <span>9h - 12:30h</span>
+                            
+                        </li>
+
+                        <li class="flex justify-between">
+                            <span>Sábado na Filial 01</span>
+                            <span>9h - 16:30h</span>
+                            
+                        </li>
+                        <li class="flex justify-between">
+                            <span>Domingo</span>
+                            <span>Fechado</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Agradecemos sua visita ao site.  <i class="fas fa-mouse"></i> </h4>
+                    <p class="text-gray-400 mb-4"></p>
+                    <form class="flex">
+                        
+                         
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-700 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-gray-400 text-sm mb-4 md:mb-0">© 2025 Óticas Paris Sul. Todos os direitos reservados.</p>
+                <div class="flex space-x-6">
+                    <a href="#" class="text-gray-400 hover:text-white transition duration-300">
+                        <i class=""></i>
+                    </a>
+                    <a href="https://www.instagram.com/oticasparissul" target="_blank" class="text-gray-400 hover:text-white transition duration-300">
+                        <i class="fab fa-instagram"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition duration-300">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    </section>
+
+    <!-- Back to Top Button -->
+    <button id="back-to-top" class="fixed bottom-8 right-8 bg-blue-500 text-white p-3 rounded-full shadow-lg opacity-0 invisible transition-all duration-300">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+
+    <script>
+        // Back to top button
+        const backToTopButton = document.getElementById('back-to-top');
+        
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                backToTopButton.classList.remove('opacity-0', 'invisible');
+                backToTopButton.classList.add('opacity-100', 'visible');
+            } else {
+                backToTopButton.classList.remove('opacity-100', 'visible');
+                backToTopButton.classList.add('opacity-0', 'invisible');
+            }
+        });
+        
+        backToTopButton.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+        
+        // Mobile menu toggle (placeholder - would need more implementation)
+      //  document.querySelector('.md\\:hidden').addEventListener('click', () => {
+           // alert('Menu mobile seria implementado aqui');
+       // });
+        
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        document.getElementById("form-pedido").addEventListener("submit", function (e) {
+    e.preventDefault(); // Impede o envio tradicional
+
+    const numeroOS = document.getElementById("order-number").value.trim();
+    const resultadoDiv = document.getElementById("resultado");
+
+    if (numeroOS === "") {
+        resultadoDiv.innerHTML = "<p class='text-red-500'>Por favor, insira um número de pedido válido.</p>";
+        return;
+    }
+
+    // Requisição AJAX
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", "consulta.php?os=" + encodeURIComponent(numeroOS), true);
+
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            resultadoDiv.innerHTML = xhr.responseText;
+        } else {
+            resultadoDiv.innerHTML = "<p class='text-red-500'>Erro ao consultar. Tente novamente.</p>";
+        }
+    };
+
+    xhr.onerror = function () {
+        resultadoDiv.innerHTML = "<p class='text-red-500'>Erro de conexão com o servidor.</p>";
+    };
+
+    xhr.send();
+});
+
+
+document.getElementById("form-pedido").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const numeroOS = document.getElementById("order-number").value.trim();
+    const resultadoDiv = document.getElementById("resultado");
+    const limparBtn = document.getElementById("limpar-btn");
+
+    if (numeroOS === "") {
+        resultadoDiv.innerHTML = "<p class='text-red-500'>Por favor, insira um número de pedido válido.</p>";
+        limparBtn.classList.remove("hidden");
+        return;
+    }
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", "consulta.php?os=" + encodeURIComponent(numeroOS), true);
+
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            resultadoDiv.innerHTML = xhr.responseText;
+        } else {
+            resultadoDiv.innerHTML = "<p class='text-red-500'>Erro ao consultar. Tente novamente.</p>";
+        }
+        limparBtn.classList.remove("hidden");
+    };
+
+    xhr.onerror = function () {
+        resultadoDiv.innerHTML = "<p class='text-red-500'>Erro de conexão com o servidor.</p>";
+        limparBtn.classList.remove("hidden");
+    };
+
+    xhr.send();
+});
+
+document.getElementById("limpar-btn").addEventListener("click", function () {
+    document.getElementById("order-number").value = "";
+    document.getElementById("resultado").innerHTML = "";
+    this.classList.add("hidden");
+});
+
+
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const os = urlParams.get('os');
+
+        if (os) {
+            const input = document.getElementById("order-number");
+            input.value = os;
+
+            // Rolagem suave até a seção do pedido
+            const orderSection = document.getElementById("order");
+            if (orderSection) {
+                orderSection.scrollIntoView({ behavior: "smooth" });
+            }
+
+            // Dispara o envio do formulário após a rolagem
+            setTimeout(() => {
+                document.getElementById("form-pedido").dispatchEvent(new Event("submit"));
+            }, 500); // espera 0.5s para dar tempo da rolagem
+        }
+    });
+
+
+
+    </script>
+</body>
+</html>
