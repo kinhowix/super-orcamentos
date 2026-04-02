@@ -195,6 +195,22 @@ export default function NovoOrcamento() {
 
   const total = itens.reduce((sum, item) => sum + (item.preco || 0), 0)
 
+  const maskPhone = (value) => {
+    if (!value) return ''
+    // Remove tudo que não é dígito
+    const digits = value.replace(/\D/g, '').substring(0, 11)
+    
+    // Aplica a máscara
+    if (digits.length <= 2) return digits
+    if (digits.length <= 7) return `(${digits.substring(0, 2)}) ${digits.substring(2)}`
+    return `(${digits.substring(0, 2)}) ${digits.substring(2, 7)}-${digits.substring(7, 11)}`
+  }
+
+  const handlePhoneChange = (e) => {
+    const formatted = maskPhone(e.target.value)
+    setCliente(prev => ({ ...prev, telefone: formatted }))
+  }
+
   const handleSave = async (status = 'pendente') => {
     if (!cliente.nome) {
       toast.error('Informe o nome do cliente')
@@ -251,6 +267,7 @@ export default function NovoOrcamento() {
       msg += `\n📝 ${observacoes}\n`
     }
 
+    // Clean phone number for URL
     const phone = cliente.telefone?.replace(/\D/g, '') || ''
     const url = phone
       ? `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`
@@ -290,7 +307,8 @@ export default function NovoOrcamento() {
                   className="form-input"
                   placeholder="(00) 00000-0000"
                   value={cliente.telefone}
-                  onChange={e => setCliente(prev => ({ ...prev, telefone: e.target.value }))}
+                  onChange={handlePhoneChange}
+                  maxLength={15} // (XX) XXXXX-XXXX = 15 chars
                 />
               </div>
             </div>
