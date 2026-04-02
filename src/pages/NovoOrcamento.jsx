@@ -29,7 +29,11 @@ export default function NovoOrcamento() {
   const [showLenteSelector, setShowLenteSelector] = useState(false)
 
   useEffect(() => {
-    setLentes(getLentes())
+    async function loadData() {
+      const data = await getLentes();
+      setLentes(data);
+    }
+    loadData();
   }, [])
 
   // Get available AR options for selected lens
@@ -191,7 +195,7 @@ export default function NovoOrcamento() {
 
   const total = itens.reduce((sum, item) => sum + (item.preco || 0), 0)
 
-  const handleSave = (status = 'pendente') => {
+  const handleSave = async (status = 'pendente') => {
     if (!cliente.nome) {
       toast.error('Informe o nome do cliente')
       return
@@ -208,7 +212,7 @@ export default function NovoOrcamento() {
       status,
     }
 
-    saveOrcamento(orcamento)
+    await saveOrcamento(orcamento)
     toast.success('Orçamento salvo com sucesso!')
 
     // Reset form
@@ -218,14 +222,14 @@ export default function NovoOrcamento() {
     setActiveItemIdx(0)
   }
 
-  const handleSendWhatsApp = () => {
+  const handleSendWhatsApp = async () => {
     if (!cliente.nome) {
       toast.error('Informe o nome do cliente')
       return
     }
 
     // Save first
-    handleSave('enviado')
+    await handleSave('enviado')
 
     // Build WhatsApp message
     let msg = `*🔍 Orçamento de Lentes*\n`

@@ -12,8 +12,13 @@ export default function Dashboard() {
   const [orcamentos, setOrcamentos] = useState([])
 
   useEffect(() => {
-    setLentes(getLentes())
-    setOrcamentos(getOrcamentos())
+    async function loadData() {
+      const lentesData = await getLentes();
+      const orcamentosData = await getOrcamentos();
+      setLentes(lentesData);
+      setOrcamentos(orcamentosData);
+    }
+    loadData();
   }, [])
 
   const totalOrcamentos = orcamentos.length

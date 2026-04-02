@@ -25,11 +25,12 @@ export default function Orcamentos() {
     applyFilters()
   }, [orcamentos, searchTerm, filterStatus])
 
-  function loadOrcamentos() {
-    const data = getOrcamentos().sort((a, b) =>
+  async function loadOrcamentos() {
+    const data = await getOrcamentos();
+    const sorted = data.sort((a, b) =>
       new Date(b.createdAt) - new Date(a.createdAt)
     )
-    setOrcamentos(data)
+    setOrcamentos(sorted)
   }
 
   function applyFilters() {
@@ -46,17 +47,17 @@ export default function Orcamentos() {
     setFiltered(result)
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Tem certeza que deseja excluir este orçamento?')) {
-      deleteOrcamento(id)
-      loadOrcamentos()
+      await deleteOrcamento(id)
+      await loadOrcamentos()
       toast.success('Orçamento excluído')
     }
   }
 
-  const handleStatusChange = (orcamento, newStatus) => {
-    saveOrcamento({ ...orcamento, status: newStatus })
-    loadOrcamentos()
+  const handleStatusChange = async (orcamento, newStatus) => {
+    await saveOrcamento({ ...orcamento, status: newStatus })
+    await loadOrcamentos()
     toast.success(`Status alterado para ${getStatusLabel(newStatus)}`)
   }
 

@@ -22,8 +22,8 @@ export default function Catalogo() {
     applyFilters()
   }, [lentes, searchTerm, filterFornecedor, filterTipo, filterIndice])
 
-  function loadLentes() {
-    const data = getLentes()
+  async function loadLentes() {
+    const data = await getLentes()
     setLentes(data)
     setFilteredLentes(data)
   }
@@ -55,10 +55,10 @@ export default function Catalogo() {
     setFilteredLentes(result)
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Tem certeza que deseja excluir esta lente?')) {
-      deleteLente(id)
-      loadLentes()
+      await deleteLente(id)
+      await loadLentes()
       toast.success('Lente excluída com sucesso')
     }
   }
