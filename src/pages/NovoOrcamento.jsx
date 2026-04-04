@@ -89,14 +89,37 @@ export default function NovoOrcamento() {
         const spec = l.especificacoes
         if (!spec) return true
 
-        // Check spherical range
-        if (esf > 0 && spec.esferico_min != null && spec.esferico_max != null) {
-          if (esf > Math.max(Math.abs(spec.esferico_min), Math.abs(spec.esferico_max))) {
-            return false
+        // Check grid-based availability (specific for Visão Simples models like Zeiss ClearView)
+        if (spec.useGrid && spec.grid) {
+          const checkEye = (eye) => {
+            const esfVal = (parseFloat(eye.esferico) || 0).toFixed(2)
+            const cilVal = Math.abs(parseFloat(eye.cilindro) || 0)
+            const gridRow = spec.grid[esfVal]
+            if (gridRow) {
+              // Check cylinder limit for this specific sphere
+              if (gridRow.maxCyl !== null && cilVal > Math.abs(gridRow.maxCyl)) return false
+              return true
+            }
+            // If sphere not in grid (outside +6.00 to -8.00 range), it might still be valid 
+            // if it falls within the global min/max, but usually the grid covers the full range.
+            // For safety, if useGrid is true, we strictly check the grid if it exists.
+            return true 
           }
+          if (!checkEye(item.olhoDireito) || !checkEye(item.olhoEsquerdo)) return false
         }
 
-        // Check cylinder
+        // Global Check spherical range (fallback or primary for non-grid lenses)
+        if (esf > 0 && spec.esferico_min != null && spec.esferico_max != null) {
+          const eMin = parseFloat(spec.esferico_min)
+          const eMax = parseFloat(spec.esferico_max)
+          const esfOD = parseFloat(item.olhoDireito.esferico) || 0
+          const esfOE = parseFloat(item.olhoEsquerdo.esferico) || 0
+          
+          if (esfOD < Math.min(eMin, eMax) || esfOD > Math.max(eMin, eMax)) return false
+          if (esfOE < Math.min(eMin, eMax) || esfOE > Math.max(eMin, eMax)) return false
+        }
+
+        // Global Check cylinder
         if (cil > 0 && spec.cilindro_max != null) {
           if (cil > Math.abs(spec.cilindro_max)) return false
         }
@@ -628,6 +651,19 @@ export default function NovoOrcamento() {
                             </span>
                             <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                               {lente.material}
+                              {(() => {
+                                const currentItem = itens[activeItemIdx] || EMPTY_ITEM
+                                if (lente.especificacoes?.useGrid && lente.especificacoes?.grid) {
+                                  const od = (parseFloat(currentItem.olhoDireito.esferico) || 0).toFixed(2)
+                                  const oe = (parseFloat(currentItem.olhoEsquerdo.esferico) || 0).toFixed(2)
+                                  const diamOD = lente.especificacoes.grid[od]?.diametro
+                                  const diamOE = lente.especificacoes.grid[oe]?.diametro
+                                  if (diamOD || diamOE) {
+                                    return ` • Ø ${diamOD || '?'}${diamOD !== diamOE ? '/' + (diamOE || '?') : ''}`
+                                  }
+                                }
+                                return lente.especificacoes?.diametro ? ` • Ø ${lente.especificacoes.diametro}` : ''
+                              })()}
                             </span>
                           </div>
                           <span style={{ fontWeight: 600, fontSize: '14px' }}>

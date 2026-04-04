@@ -42,6 +42,16 @@ const EMPTY_INDICE = {
   precos: {}
 }
 
+const generateSphereRange = () => {
+  const range = []
+  for (let s = 6.0; s >= -8.0; s -= 0.25) {
+    range.push(s.toFixed(2))
+  }
+  return range
+}
+
+const SPH_RANGE = generateSphereRange()
+
 // Retorna os níveis de AR para um fornecedor (do config)
 function resolveNiveisAR(fornecedor, config = []) {
   if (!fornecedor) return AR_FALLBACK.map(n => n.key)
@@ -67,6 +77,8 @@ const EMPTY_LENTE = {
     adicao_max: '',
     diametro: '',
     prisma: 'Não',
+    useGrid: false,
+    grid: {}
   }
 }
 
@@ -104,6 +116,7 @@ export default function CadastroLentes() {
   const [arEditNiveis, setArEditNiveis] = useState([])
   const [novoAREdit, setNovoAREdit] = useState('')
   const [novoAREditLabel, setNovoAREditLabel] = useState('')
+  const [gridRowIndex, setGridRowIndex] = useState(null)
 
   useEffect(() => {
     async function loadConfig() {
@@ -254,6 +267,8 @@ export default function CadastroLentes() {
         adicao_max: lente.especificacoes.adicao_max ? parseFloat(lente.especificacoes.adicao_max) : null,
         diametro: lente.especificacoes.diametro ? parseInt(lente.especificacoes.diametro) : null,
         prisma: lente.especificacoes.prisma,
+        useGrid: lente.especificacoes.useGrid || false,
+        grid: lente.especificacoes.grid || {}
       }
     }))
 
@@ -347,6 +362,8 @@ export default function CadastroLentes() {
       adicao_max: '',
       diametro: '',
       prisma: 'Não',
+      useGrid: false,
+      grid: {},
       rawText: '',
     }
   }
@@ -417,6 +434,8 @@ export default function CadastroLentes() {
           adicao_max: l.adicao_max ? parseFloat(l.adicao_max) : null,
           diametro: l.diametro ? parseInt(l.diametro) : null,
           prisma: l.prisma,
+          useGrid: l.useGrid || false,
+          grid: l.grid || {}
         }
       }))
 
@@ -588,6 +607,8 @@ export default function CadastroLentes() {
           loteNome={loteNome}
           loteARColumns={loteARColumns}
           fornecedores={fornecedores}
+          gridRowIndex={gridRowIndex}
+          setGridRowIndex={setGridRowIndex}
           onLoteChange={handleLoteChange}
           onLotePrecoChange={handleLotePrecoChange}
           onSetLoteFornecedor={handleLoteFornecedorChange}
@@ -917,10 +938,33 @@ function ManualForm({
             </div>
           </div>
         )}
+        {lente.tipo === 'visao_simples' && (
+          <div style={{ marginTop: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+              <input 
+                type="checkbox" 
+                id="useGrid"
+                checked={lente.especificacoes.useGrid}
+                onChange={e => onSpecChange('useGrid', e.target.checked)}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <label htmlFor="useGrid" style={{ fontWeight: 600, cursor: 'pointer', color: 'var(--accent-primary-hover)' }}>
+                Usar Grade de Disponibilidade Detalhada
+              </label>
+            </div>
+            
+            {lente.especificacoes.useGrid && (
+              <GridEditor 
+                grid={lente.especificacoes.grid || {}} 
+                onChange={(newGrid) => onSpecChange('grid', newGrid)}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
-        <button className="btn btn-secondary" onClick={() => setLente && onLenteChange('nome', '')}>
+        <button className="btn btn-secondary" onClick={() => onLenteChange('nome', '')}>
           Limpar
         </button>
         <button className="btn btn-primary" onClick={onSave}>
@@ -1095,7 +1139,7 @@ function PDFImport({
 // ========== LOTE (BATCH) FORM COMPONENT ==========
 function LoteForm({
   loteLentes, loteFornecedor, loteTipo, loteNome, loteARColumns,
-  fornecedores,
+  fornecedores, gridRowIndex, setGridRowIndex,
   onLoteChange, onLotePrecoChange,
   onSetLoteFornecedor, onSetLoteTipo, onSetLoteNome,
   onToggleLoteAR, onAddRow, onRemoveRow, onSave,
@@ -1213,6 +1257,7 @@ function LoteForm({
               )}
               <th style={{ minWidth: '60px' }}>Ø</th>
               <th style={{ minWidth: '60px' }}>Prisma</th>
+              {loteTipo === 'visao_simples' && <th style={{ minWidth: '60px' }}>Grade</th>}
               <th style={{ width: '40px' }}></th>
             </tr>
           </thead>
@@ -1330,6 +1375,17 @@ function LoteForm({
                     <option value="Sim">Sim</option>
                   </select>
                 </td>
+                {loteTipo === 'visao_simples' && (
+                  <td>
+                    <button 
+                      className={`btn btn-sm btn-icon ${item.useGrid ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setGridRowIndex(idx)}
+                      title="Configurar Grade"
+                    >
+                      <Settings size={14} />
+                    </button>
+                  </td>
+                )}
                 <td>
                   {loteLentes.length > 1 && (
                     <button
@@ -1375,6 +1431,48 @@ function LoteForm({
           <Save size={16} /> Salvar Todas as Lentes
         </button>
       </div>
+
+      {/* Grid Modal for Lote */}
+      {gridRowIndex !== null && (
+        <div className="modal-overlay" onClick={() => setGridRowIndex(null)}>
+          <div className="modal modal-md" onClick={e => e.stopPropagation()} style={{ maxWidth: '604px', width: '95%' }}>
+            <div className="modal-header">
+              <h2>Grade de Disponibilidade: {loteLentes[gridRowIndex].indice}</h2>
+              <button className="modal-close" onClick={() => setGridRowIndex(null)}>×</button>
+            </div>
+            <div style={{ padding: '0 20px 20px' }}>
+               <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                 Defina o cilindro máximo e o diâmetro para cada grau esférico desta lente.
+               </p>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                 <input 
+                   type="checkbox" 
+                   id="loteUseGrid"
+                   checked={loteLentes[gridRowIndex].useGrid}
+                   onChange={e => onLoteChange(gridRowIndex, 'useGrid', e.target.checked)}
+                   style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                 />
+                 <label htmlFor="loteUseGrid" style={{ fontWeight: 600, cursor: 'pointer' }}>
+                   Usar Grade nesta lente
+                 </label>
+               </div>
+               {loteLentes[gridRowIndex].useGrid && (
+                 <div style={{ maxHeight: '400px', overflow: 'auto' }}>
+                   <GridEditor 
+                     grid={loteLentes[gridRowIndex].grid || {}}
+                     onChange={(newGrid) => onLoteChange(gridRowIndex, 'grid', newGrid)}
+                   />
+                 </div>
+               )}
+               <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+                 <button className="btn btn-primary" onClick={() => setGridRowIndex(null)}>
+                   Pronto
+                 </button>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1642,6 +1740,116 @@ function NiveisARForm({
             </div>
           </>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ========== GRID EDITOR COMPONENT ==========
+function GridEditor({ grid, onChange }) {
+  const [globalCyl, setGlobalCyl] = useState('')
+  const [globalDiam, setGlobalDiam] = useState('')
+
+  const handleRowChange = (sph, field, value) => {
+    const newGrid = { ...grid }
+    if (!newGrid[sph]) newGrid[sph] = { maxCyl: null, diametro: null }
+    
+    if (field === 'maxCyl') {
+      newGrid[sph].maxCyl = value ? parseFloat(value) : null
+    } else {
+      newGrid[sph].diametro = value ? parseInt(value) : null
+    }
+    onChange(newGrid)
+  }
+
+  const applyGlobal = () => {
+    const newGrid = { ...grid }
+    SPH_RANGE.forEach(sph => {
+      if (!newGrid[sph]) newGrid[sph] = { maxCyl: null, diametro: null }
+      if (globalCyl) newGrid[sph].maxCyl = parseFloat(globalCyl)
+      if (globalDiam) newGrid[sph].diametro = parseInt(globalDiam)
+    })
+    onChange(newGrid)
+  }
+
+  return (
+    <div className="grid-editor" style={{ 
+      background: 'var(--bg-glass)', 
+      border: '1px solid var(--border-color)',
+      borderRadius: 'var(--radius-sm)',
+      padding: '16px'
+    }}>
+      <div style={{ 
+        display: 'flex', 
+        gap: '12px', 
+        marginBottom: '20px', 
+        padding: '12px', 
+        background: 'rgba(99, 102, 241, 0.05)',
+        borderRadius: 'var(--radius-xs)',
+        alignItems: 'flex-end'
+      }}>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label className="form-label" style={{ fontSize: '11px' }}>Cil. Máx Global</label>
+          <input 
+            className="form-input form-input-sm" 
+            type="number" 
+            step="0.25" 
+            value={globalCyl} 
+            onChange={e => setGlobalCyl(e.target.value)}
+            placeholder="-2.00"
+          />
+        </div>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label className="form-label" style={{ fontSize: '11px' }}>Ø Global</label>
+          <input 
+            className="form-input form-input-sm" 
+            type="number" 
+            value={globalDiam} 
+            onChange={e => setGlobalDiam(e.target.value)}
+            placeholder="70"
+          />
+        </div>
+        <button className="btn btn-secondary btn-sm" onClick={applyGlobal} type="button">
+          Aplicar em Todos
+        </button>
+      </div>
+
+      <div className="table-container" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+        <table className="table table-sm">
+          <thead style={{ position: 'sticky', top: 0, background: 'var(--card-bg)', zIndex: 1 }}>
+            <tr>
+              <th>SVP (Esférico)</th>
+              <th>Cilindro Máximo</th>
+              <th>Diâmetro (Ø)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {SPH_RANGE.map(sph => (
+              <tr key={sph}>
+                <td style={{ fontWeight: 600 }}>{parseFloat(sph) > 0 ? `+${sph}` : sph}</td>
+                <td>
+                  <input 
+                    className="form-input form-input-sm" 
+                    type="number" 
+                    step="0.25"
+                    placeholder="Mesmo da lente"
+                    value={grid[sph]?.maxCyl || ''}
+                    onChange={e => handleRowChange(sph, 'maxCyl', e.target.value)}
+                  />
+                </td>
+                <td>
+                  <input 
+                    className="form-input form-input-sm" 
+                    type="number" 
+                    placeholder="70"
+                    value={grid[sph]?.diametro || ''}
+                    onChange={e => handleRowChange(sph, 'diametro', e.target.value)}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   )
