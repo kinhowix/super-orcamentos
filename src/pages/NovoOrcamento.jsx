@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
-  Plus, Trash2, Save, Send, Search
+  Plus, Trash2, Save, Send, Search, Camera, ClipboardCheck, Loader2
 } from 'lucide-react'
+import { extractTextFromImage, parsePrescriptionText } from '../services/ocrService'
+
 import { useToast } from '../contexts/ToastContext'
 import {
   getLentes, saveOrcamento, formatCurrency, getAntiReflexoLabel
@@ -29,6 +31,14 @@ export default function NovoOrcamento() {
   const [searchLente, setSearchLente] = useState('')
   const [activeItemIdx, setActiveItemIdx] = useState(0)
   const [showLenteSelector, setShowLenteSelector] = useState(false)
+  
+  // OCR States
+  const [ocrLoading, setOcrLoading] = useState(false)
+  const [ocrProgress, setOcrProgress] = useState(0)
+  const [showOcrConfirm, setShowOcrConfirm] = useState(false)
+  const [ocrResult, setOcrResult] = useState(null)
+  const [ocrPreview, setOcrPreview] = useState(null)
+
 
   useEffect(() => {
     async function loadData() {
@@ -229,6 +239,43 @@ export default function NovoOrcamento() {
     setCliente(prev => ({ ...prev, telefone: formatted }))
   }
 
+  const handleCaptureImage = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Show preview
+    const reader = new FileReader()
+    reader.onload = (event) => setOcrPreview(event.target.result)
+    reader.readAsDataURL(file)
+
+    setOcrLoading(true)
+    setOcrProgress(0)
+
+    try {
+      const text = await extractTextFromImage(file, (progress) => {
+        setOcrProgress(progress)
+      })
+      
+      const parsed = parsePrescriptionText(text)
+      setOcrResult(parsed)
+      setShowOcrConfirm(true)
+    } catch (error) {
+      console.error('OCR Error:', error)
+      toast.error('Erro ao ler a imagem. Tente novamente.')
+    } finally {
+      setOcrLoading(false)
+    }
+  }
+
+  const applyOcrResult = () => {
+    if (ocrResult) {
+      setReceita(ocrResult)
+      toast.success('Receita preenchida!')
+    }
+    setShowOcrConfirm(false)
+    setOcrPreview(null)
+  }
+
   const handleSave = async (status = 'pendente') => {
     if (!cliente.nome) {
       toast.error('Informe o nome do cliente')
@@ -349,6 +396,24 @@ export default function NovoOrcamento() {
           <div className="card">
             <div className="card-header">
               <h3 className="card-title">📝 Receita do Cliente</h3>
+              <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
+                {ocrLoading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Camera size={16} />
+                )}
+                <span style={{ marginLeft: '8px' }}>
+                  {ocrLoading ? `Lendo... ${ocrProgress}%` : 'Ler Receita'}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  style={{ display: 'none' }}
+                  onChange={handleCaptureImage}
+                  disabled={ocrLoading}
+                />
+              </label>
             </div>
             
             <div style={{ marginBottom: '16px' }}>
@@ -695,6 +760,97 @@ export default function NovoOrcamento() {
           </div>
         </div>
       )}
+
+      {/* OCR Confirmation Modal */}
+      {showOcrConfirm && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h2>Confirmar Graus Lidos</h2>
+              <button className="modal-close" onClick={() => setShowOcrConfirm(false)}>×</button>
+            </div>
+
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '14px' }}>
+              Identificamos os seguintes valores na imagem. Verifique se estão corretos antes de aplicar.
+            </p>
+
+            {ocrPreview && (
+              <div className="ocr-preview-container">
+                <img src={ocrPreview} alt="Preview da receita" />
+              </div>
+            )}
+
+            <div className="ocr-results-grid">
+              <div />
+              <div className="ocr-result-header">OD (Direito)</div>
+              <div className="ocr-result-header">OE (Esquerdo)</div>
+
+              <div className="ocr-result-row">
+                <div className="ocr-result-eye">Esférico</div>
+                <input 
+                  className="ocr-result-input" 
+                  value={ocrResult?.od.esferico} 
+                  onChange={e => setOcrResult(prev => ({...prev, od: {...prev.od, esferico: e.target.value}}))}
+                />
+                <input 
+                  className="ocr-result-input" 
+                  value={ocrResult?.oe.esferico} 
+                  onChange={e => setOcrResult(prev => ({...prev, oe: {...prev.oe, esferico: e.target.value}}))}
+                />
+              </div>
+
+              <div className="ocr-result-row">
+                <div className="ocr-result-eye">Cilíndrico</div>
+                <input 
+                  className="ocr-result-input" 
+                  value={ocrResult?.od.cilindro} 
+                  onChange={e => setOcrResult(prev => ({...prev, od: {...prev.od, cilindro: e.target.value}}))}
+                />
+                <input 
+                  className="ocr-result-input" 
+                  value={ocrResult?.oe.cilindro} 
+                  onChange={e => setOcrResult(prev => ({...prev, oe: {...prev.oe, cilindro: e.target.value}}))}
+                />
+              </div>
+
+              <div className="ocr-result-row">
+                <div className="ocr-result-eye">Eixo</div>
+                <input 
+                  className="ocr-result-input" 
+                  value={ocrResult?.od.eixo} 
+                  onChange={e => setOcrResult(prev => ({...prev, od: {...prev.od, eixo: e.target.value}}))}
+                />
+                <input 
+                  className="ocr-result-input" 
+                  value={ocrResult?.oe.eixo} 
+                  onChange={e => setOcrResult(prev => ({...prev, oe: {...prev.oe, eixo: e.target.value}}))}
+                />
+              </div>
+
+              <div className="ocr-result-row">
+                <div className="ocr-result-eye">Adição</div>
+                <input 
+                  className="ocr-result-input" 
+                  value={ocrResult?.od.adicao} 
+                  onChange={e => setOcrResult(prev => ({...prev, od: {...prev.od, adicao: e.target.value}}))}
+                />
+                <input 
+                  className="ocr-result-input" 
+                  value={ocrResult?.oe.adicao} 
+                  onChange={e => setOcrResult(prev => ({...prev, oe: {...prev.oe, adicao: e.target.value}}))}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={applyOcrResult}>
+                <ClipboardCheck size={18} /> Confirmar e Preencher
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+
