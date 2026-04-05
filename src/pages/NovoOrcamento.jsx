@@ -14,8 +14,6 @@ const EMPTY_ITEM = {
   indice: '',
   antirreflexo: '',
   preco: 0,
-  olhoDireito: { esferico: '', cilindro: '', eixo: '', adicao: '' },
-  olhoEsquerdo: { esferico: '', cilindro: '', eixo: '', adicao: '' },
 }
 
 export default function NovoOrcamento() {
@@ -23,6 +21,10 @@ export default function NovoOrcamento() {
   const [lentes, setLentes] = useState([])
   const [cliente, setCliente] = useState({ nome: '', telefone: '' })
   const [itens, setItens] = useState([{ ...EMPTY_ITEM }])
+  const [receita, setReceita] = useState({
+    od: { esferico: '', cilindro: '', eixo: '', adicao: '' },
+    oe: { esferico: '', cilindro: '', eixo: '', adicao: '' },
+  })
   const [observacoes, setObservacoes] = useState('')
   const [searchLente, setSearchLente] = useState('')
   const [activeItemIdx, setActiveItemIdx] = useState(0)
@@ -49,7 +51,7 @@ export default function NovoOrcamento() {
   }
 
   // Filter lenses based on prescription
-  const getCompatibleLenses = (item) => {
+  const getCompatibleLenses = () => {
     let result = [...lentes]
 
     // Filter by search
@@ -63,16 +65,16 @@ export default function NovoOrcamento() {
 
     // Filter by prescription compatibility
     const esf = Math.max(
-      Math.abs(parseFloat(item.olhoDireito.esferico) || 0),
-      Math.abs(parseFloat(item.olhoEsquerdo.esferico) || 0)
+      Math.abs(parseFloat(receita.od.esferico) || 0),
+      Math.abs(parseFloat(receita.oe.esferico) || 0)
     )
     const cil = Math.max(
-      Math.abs(parseFloat(item.olhoDireito.cilindro) || 0),
-      Math.abs(parseFloat(item.olhoEsquerdo.cilindro) || 0)
+      Math.abs(parseFloat(receita.od.cilindro) || 0),
+      Math.abs(parseFloat(receita.oe.cilindro) || 0)
     )
     const ad = Math.max(
-      Math.abs(parseFloat(item.olhoDireito.adicao) || 0),
-      Math.abs(parseFloat(item.olhoEsquerdo.adicao) || 0)
+      Math.abs(parseFloat(receita.od.adicao) || 0),
+      Math.abs(parseFloat(receita.oe.adicao) || 0)
     )
 
     // Filter type based on addition
@@ -100,20 +102,17 @@ export default function NovoOrcamento() {
               if (gridRow.maxCyl !== null && cilVal > Math.abs(gridRow.maxCyl)) return false
               return true
             }
-            // If sphere not in grid (outside +6.00 to -8.00 range), it might still be valid 
-            // if it falls within the global min/max, but usually the grid covers the full range.
-            // For safety, if useGrid is true, we strictly check the grid if it exists.
             return true 
           }
-          if (!checkEye(item.olhoDireito) || !checkEye(item.olhoEsquerdo)) return false
+          if (!checkEye(receita.od) || !checkEye(receita.oe)) return false
         }
 
         // Global Check spherical range (fallback or primary for non-grid lenses)
         if (esf > 0 && spec.esferico_min != null && spec.esferico_max != null) {
           const eMin = parseFloat(spec.esferico_min)
           const eMax = parseFloat(spec.esferico_max)
-          const esfOD = parseFloat(item.olhoDireito.esferico) || 0
-          const esfOE = parseFloat(item.olhoEsquerdo.esferico) || 0
+          const esfOD = parseFloat(receita.od.esferico) || 0
+          const esfOE = parseFloat(receita.oe.esferico) || 0
           
           if (esfOD < Math.min(eMin, eMax) || esfOD > Math.max(eMin, eMax)) return false
           if (esfOE < Math.min(eMin, eMax) || esfOE > Math.max(eMin, eMax)) return false
@@ -138,7 +137,7 @@ export default function NovoOrcamento() {
 
   // Group compatible lenses
   const groupedCompatibleLenses = useMemo(() => {
-    const compatible = getCompatibleLenses(itens[activeItemIdx] || EMPTY_ITEM)
+    const compatible = getCompatibleLenses()
     const groups = {}
     compatible.forEach(l => {
       const key = `${l.fornecedor}-${l.nome}`
@@ -153,7 +152,7 @@ export default function NovoOrcamento() {
       groups[key].lentes.push(l)
     })
     return groups
-  }, [lentes, searchLente, itens, activeItemIdx])
+  }, [lentes, searchLente, receita])
 
   const handleSelectLente = (lente) => {
     const arKeys = Object.keys(lente.precos || {})
@@ -192,15 +191,11 @@ export default function NovoOrcamento() {
     })
   }
 
-  const handleEyeChange = (itemIdx, eye, field, value) => {
-    setItens(prev => {
-      const updated = [...prev]
-      updated[itemIdx] = {
-        ...updated[itemIdx],
-        [eye]: { ...updated[itemIdx][eye], [field]: value }
-      }
-      return updated
-    })
+  const handleReceitaChange = (eye, field, value) => {
+    setReceita(prev => ({
+      ...prev,
+      [eye]: { ...prev[eye], [field]: value }
+    }))
   }
 
   const addItem = () => {
@@ -242,6 +237,7 @@ export default function NovoOrcamento() {
 
     const orcamento = {
       cliente,
+      receita,
       itens: itens.map(item => ({
         ...item,
         preco: parseFloat(item.preco) || 0,
@@ -256,6 +252,10 @@ export default function NovoOrcamento() {
 
     // Reset form
     setCliente({ nome: '', telefone: '' })
+    setReceita({
+      od: { esferico: '', cilindro: '', eixo: '', adicao: '' },
+      oe: { esferico: '', cilindro: '', eixo: '', adicao: '' },
+    })
     setItens([{ ...EMPTY_ITEM }])
     setObservacoes('')
     setActiveItemIdx(0)
@@ -273,7 +273,15 @@ export default function NovoOrcamento() {
     // Build WhatsApp message
     let msg = `*🔍 Orçamento de Lentes*\n`
     msg += `━━━━━━━━━━━━━━━━━━\n`
-    msg += `*Cliente:* ${cliente.nome}\n\n`
+    msg += `*Cliente:* ${cliente.nome}\n`
+
+    if (receita.od.esferico || receita.oe.esferico) {
+      msg += `\n*Receita:* \n`
+      msg += `OD: ${receita.od.esferico || '0.00'}/${receita.od.cilindro || '0.00'} Eixo: ${receita.od.eixo || '0'}° Add: ${receita.od.adicao || '0.00'}\n`
+      msg += `OE: ${receita.oe.esferico || '0.00'}/${receita.oe.cilindro || '0.00'} Eixo: ${receita.oe.eixo || '0'}° Add: ${receita.oe.adicao || '0.00'}\n`
+    }
+    
+    msg += `\n`
 
     itens.forEach((item, idx) => {
       if (item.lenteName) {
@@ -337,6 +345,111 @@ export default function NovoOrcamento() {
             </div>
           </div>
 
+          {/* Prescription */}
+          <div className="card">
+            <div className="card-header">
+              <h3 className="card-title">📝 Receita do Cliente</h3>
+            </div>
+            
+            <div style={{ marginBottom: '16px' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>Olho Direito (OD)</label>
+              <div className="form-row" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: '11px' }}>Esférico</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    step="0.25"
+                    placeholder="0.00"
+                    value={receita.od.esferico}
+                    onChange={e => handleReceitaChange('od', 'esferico', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    step="0.25"
+                    placeholder="0.00"
+                    value={receita.od.cilindro}
+                    onChange={e => handleReceitaChange('od', 'cilindro', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '11px' }}>Eixo</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    placeholder="0"
+                    value={receita.od.eixo}
+                    onChange={e => handleReceitaChange('od', 'eixo', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '11px' }}>Adição</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    step="0.25"
+                    placeholder="0.00"
+                    value={receita.od.adicao}
+                    onChange={e => handleReceitaChange('od', 'adicao', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="form-label" style={{ fontWeight: 600 }}>Olho Esquerdo (OE)</label>
+              <div className="form-row" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: '11px' }}>Esférico</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    step="0.25"
+                    placeholder="0.00"
+                    value={receita.oe.esferico}
+                    onChange={e => handleReceitaChange('oe', 'esferico', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    step="0.25"
+                    placeholder="0.00"
+                    value={receita.oe.cilindro}
+                    onChange={e => handleReceitaChange('oe', 'cilindro', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '11px' }}>Eixo</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    placeholder="0"
+                    value={receita.oe.eixo}
+                    onChange={e => handleReceitaChange('oe', 'eixo', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '11px' }}>Adição</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    step="0.25"
+                    placeholder="0.00"
+                    value={receita.oe.adicao}
+                    onChange={e => handleReceitaChange('oe', 'adicao', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Lens Items */}
           {itens.map((item, idx) => (
             <div key={idx} className="card" style={{
@@ -360,105 +473,6 @@ export default function NovoOrcamento() {
                       <Trash2 size={14} />
                     </button>
                   )}
-                </div>
-              </div>
-
-              {/* Prescription */}
-              <div style={{ marginBottom: '16px' }}>
-                <label className="form-label">Receita - Olho Direito (OD)</label>
-                <div className="form-row" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '11px' }}>Esférico</label>
-                    <input
-                      className="form-input"
-                      type="number"
-                      step="0.25"
-                      placeholder="0.00"
-                      value={item.olhoDireito.esferico}
-                      onChange={e => handleEyeChange(idx, 'olhoDireito', 'esferico', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label>
-                    <input
-                      className="form-input"
-                      type="number"
-                      step="0.25"
-                      placeholder="0.00"
-                      value={item.olhoDireito.cilindro}
-                      onChange={e => handleEyeChange(idx, 'olhoDireito', 'cilindro', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '11px' }}>Eixo</label>
-                    <input
-                      className="form-input"
-                      type="number"
-                      placeholder="0"
-                      value={item.olhoDireito.eixo}
-                      onChange={e => handleEyeChange(idx, 'olhoDireito', 'eixo', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '11px' }}>Adição</label>
-                    <input
-                      className="form-input"
-                      type="number"
-                      step="0.25"
-                      placeholder="0.00"
-                      value={item.olhoDireito.adicao}
-                      onChange={e => handleEyeChange(idx, 'olhoDireito', 'adicao', e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '16px' }}>
-                <label className="form-label">Receita - Olho Esquerdo (OE)</label>
-                <div className="form-row" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '11px' }}>Esférico</label>
-                    <input
-                      className="form-input"
-                      type="number"
-                      step="0.25"
-                      placeholder="0.00"
-                      value={item.olhoEsquerdo.esferico}
-                      onChange={e => handleEyeChange(idx, 'olhoEsquerdo', 'esferico', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label>
-                    <input
-                      className="form-input"
-                      type="number"
-                      step="0.25"
-                      placeholder="0.00"
-                      value={item.olhoEsquerdo.cilindro}
-                      onChange={e => handleEyeChange(idx, 'olhoEsquerdo', 'cilindro', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '11px' }}>Eixo</label>
-                    <input
-                      className="form-input"
-                      type="number"
-                      placeholder="0"
-                      value={item.olhoEsquerdo.eixo}
-                      onChange={e => handleEyeChange(idx, 'olhoEsquerdo', 'eixo', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '11px' }}>Adição</label>
-                    <input
-                      className="form-input"
-                      type="number"
-                      step="0.25"
-                      placeholder="0.00"
-                      value={item.olhoEsquerdo.adicao}
-                      onChange={e => handleEyeChange(idx, 'olhoEsquerdo', 'adicao', e.target.value)}
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -654,8 +668,8 @@ export default function NovoOrcamento() {
                               {(() => {
                                 const currentItem = itens[activeItemIdx] || EMPTY_ITEM
                                 if (lente.especificacoes?.useGrid && lente.especificacoes?.grid) {
-                                  const od = (parseFloat(currentItem.olhoDireito.esferico) || 0).toFixed(2)
-                                  const oe = (parseFloat(currentItem.olhoEsquerdo.esferico) || 0).toFixed(2)
+                                  const od = (parseFloat(receita.od.esferico) || 0).toFixed(2)
+                                  const oe = (parseFloat(receita.oe.esferico) || 0).toFixed(2)
                                   const diamOD = lente.especificacoes.grid[od]?.diametro
                                   const diamOE = lente.especificacoes.grid[oe]?.diametro
                                   if (diamOD || diamOE) {

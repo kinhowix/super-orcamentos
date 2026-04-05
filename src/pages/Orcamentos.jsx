@@ -64,7 +64,20 @@ export default function Orcamentos() {
   const handleResendWhatsApp = (orc) => {
     let msg = `*🔍 Orçamento de Lentes*\n`
     msg += `━━━━━━━━━━━━━━━━━━\n`
-    msg += `*Cliente:* ${orc.cliente?.nome}\n\n`
+    msg += `*Cliente:* ${orc.cliente?.nome}\n`
+
+    const rec = orc.receita || (orc.itens?.[0]?.olhoDireito ? { 
+      od: orc.itens[0].olhoDireito, 
+      oe: orc.itens[0].olhoEsquerdo 
+    } : null);
+
+    if (rec) {
+      msg += `\n*Receita:* \n`
+      msg += `OD: ${rec.od?.esferico || '0.00'}/${rec.od?.cilindro || '0.00'} Eixo: ${rec.od?.eixo || '0'}° Add: ${rec.od?.adicao || '0.00'}\n`
+      msg += `OE: ${rec.oe?.esferico || '0.00'}/${rec.oe?.cilindro || '0.00'} Eixo: ${rec.oe?.eixo || '0'}° Add: ${rec.oe?.adicao || '0.00'}\n`
+    }
+    
+    msg += `\n`
 
     orc.itens?.forEach((item, idx) => {
       if (item.lenteName) {
@@ -248,6 +261,53 @@ export default function Orcamentos() {
             </div>
 
             <div className="divider" />
+
+            {/* Prescription Display */}
+            {(() => {
+              const rec = selectedOrc.receita || (selectedOrc.itens?.[0]?.olhoDireito ? { 
+                od: selectedOrc.itens[0].olhoDireito, 
+                oe: selectedOrc.itens[0].olhoEsquerdo 
+              } : null);
+
+              if (!rec) return null;
+
+              return (
+                <div style={{ marginBottom: '24px' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                    📝 Receita (Graus)
+                  </h4>
+                  <div style={{ overflowX: 'auto', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '12px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>
+                          <th style={{ padding: '8px 4px', color: 'var(--text-muted)' }}>Olho</th>
+                          <th style={{ padding: '8px 4px', color: 'var(--text-muted)' }}>Esférico</th>
+                          <th style={{ padding: '8px 4px', color: 'var(--text-muted)' }}>Cilíndrico</th>
+                          <th style={{ padding: '8px 4px', color: 'var(--text-muted)' }}>Eixo</th>
+                          <th style={{ padding: '8px 4px', color: 'var(--text-muted)' }}>Adição</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                          <td style={{ padding: '8px 4px', fontWeight: 600 }}>OD</td>
+                          <td style={{ padding: '8px 4px' }}>{rec.od?.esferico || '0.00'}</td>
+                          <td style={{ padding: '8px 4px' }}>{rec.od?.cilindro || '0.00'}</td>
+                          <td style={{ padding: '8px 4px' }}>{rec.od?.eixo || '0'}°</td>
+                          <td style={{ padding: '8px 4px' }}>{rec.od?.adicao || '0.00'}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '8px 4px', fontWeight: 600 }}>OE</td>
+                          <td style={{ padding: '8px 4px' }}>{rec.oe?.esferico || '0.00'}</td>
+                          <td style={{ padding: '8px 4px' }}>{rec.oe?.cilindro || '0.00'}</td>
+                          <td style={{ padding: '8px 4px' }}>{rec.oe?.eixo || '0'}°</td>
+                          <td style={{ padding: '8px 4px' }}>{rec.oe?.adicao || '0.00'}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
 
             {selectedOrc.itens?.map((item, idx) => (
               <div key={idx} style={{
