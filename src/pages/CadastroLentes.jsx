@@ -43,15 +43,13 @@ const EMPTY_INDICE = {
   precos: {}
 }
 
-const generateSphereRange = () => {
+const generateSphereRange = (max = 6.0, min = -8.0) => {
   const range = []
-  for (let s = 6.0; s >= -8.0; s -= 0.25) {
+  for (let s = max; s >= min; s -= 0.25) {
     range.push(s.toFixed(2))
   }
   return range
 }
-
-const SPH_RANGE = generateSphereRange()
 
 // Retorna os níveis de AR para um fornecedor (do config)
 function resolveNiveisAR(fornecedor, config = []) {
@@ -1827,25 +1825,40 @@ function NiveisARForm({
 function GridEditor({ grid, onChange }) {
   const [globalCyl, setGlobalCyl] = useState('')
   const [globalDiam, setGlobalDiam] = useState('')
+  const [maxSph, setMaxSph] = useState(6.0)
+  const [minSph, setMinSph] = useState(-8.0)
+
+  // Auto-detect range from existing grid keys
+  useEffect(() => {
+    const keys = Object.keys(grid).map(Number)
+    if (keys.length > 0) {
+      const currentMax = Math.max(...keys)
+      const currentMin = Math.min(...keys)
+      if (currentMax > maxSph) setMaxSph(currentMax)
+      if (currentMin < minSph) setMinSph(currentMin)
+    }
+  }, [grid])
+
+  const visibleRange = generateSphereRange(maxSph, minSph)
 
   const handleRowChange = (sph, field, value) => {
     const newGrid = { ...grid }
     if (!newGrid[sph]) newGrid[sph] = { maxCyl: null, diametro: null }
     
     if (field === 'maxCyl') {
-      newGrid[sph].maxCyl = value ? parseFloat(value) : null
+      newGrid[sph].maxCyl = (value !== "" && value !== null) ? parseFloat(value) : null
     } else {
-      newGrid[sph].diametro = value ? parseInt(value) : null
+      newGrid[sph].diametro = (value !== "" && value !== null) ? parseInt(value) : null
     }
     onChange(newGrid)
   }
 
   const applyGlobal = () => {
     const newGrid = { ...grid }
-    SPH_RANGE.forEach(sph => {
+    visibleRange.forEach(sph => {
       if (!newGrid[sph]) newGrid[sph] = { maxCyl: null, diametro: null }
-      if (globalCyl) newGrid[sph].maxCyl = parseFloat(globalCyl)
-      if (globalDiam) newGrid[sph].diametro = parseInt(globalDiam)
+      if (globalCyl !== "" && globalCyl !== null) newGrid[sph].maxCyl = parseFloat(globalCyl)
+      if (globalDiam !== "" && globalDiam !== null) newGrid[sph].diametro = parseInt(globalDiam)
     })
     onChange(newGrid)
   }
@@ -1902,7 +1915,20 @@ function GridEditor({ grid, onChange }) {
             </tr>
           </thead>
           <tbody>
-            {SPH_RANGE.map(sph => (
+            <tr style={{ background: 'rgba(99, 102, 241, 0.05)' }}>
+              <td colSpan="3" style={{ padding: '8px', textAlign: 'center' }}>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => setMaxSph(prev => prev + 1.0)}
+                  type="button"
+                  style={{ width: '100%', border: '1px dashed var(--accent-primary)' }}
+                >
+                  <Plus size={10} style={{ marginRight: '6px' }} /> 
+                  Expandir Grade Positiva (+1.00 grau)
+                </button>
+              </td>
+            </tr>
+            {visibleRange.map(sph => (
               <tr key={sph}>
                 <td style={{ fontWeight: 600 }}>{parseFloat(sph) > 0 ? `+${sph}` : sph}</td>
                 <td>
@@ -1911,7 +1937,7 @@ function GridEditor({ grid, onChange }) {
                     type="number" 
                     step="0.25"
                     placeholder="Mesmo da lente"
-                    value={grid[sph]?.maxCyl || ''}
+                    value={grid[sph]?.maxCyl ?? ''}
                     onChange={e => handleRowChange(sph, 'maxCyl', e.target.value)}
                   />
                 </td>
@@ -1920,12 +1946,25 @@ function GridEditor({ grid, onChange }) {
                     className="form-input form-input-sm" 
                     type="number" 
                     placeholder="70"
-                    value={grid[sph]?.diametro || ''}
+                    value={grid[sph]?.diametro ?? ''}
                     onChange={e => handleRowChange(sph, 'diametro', e.target.value)}
                   />
                 </td>
               </tr>
             ))}
+            <tr style={{ background: 'rgba(99, 102, 241, 0.05)' }}>
+              <td colSpan="3" style={{ padding: '8px', textAlign: 'center' }}>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => setMinSph(prev => prev - 1.0)}
+                  type="button"
+                  style={{ width: '100%', border: '1px dashed var(--accent-primary)' }}
+                >
+                  <Plus size={10} style={{ marginRight: '6px' }} /> 
+                  Expandir Grade Negativa (-1.00 grau)
+                </button>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>

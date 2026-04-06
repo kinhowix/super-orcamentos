@@ -69,7 +69,7 @@ export default function Catalogo() {
   const indices = [...new Set(lentes.map(l => l.indice).filter(Boolean))].sort()
   const activeFilters = [filterFornecedor, filterTipo, filterIndice].filter(Boolean).length
 
-  // Group lenses by name+fornecedor for display
+  // Group lenses and pre-calculate AR keys for each group
   const groupedLentes = {}
   filteredLentes.forEach(l => {
     const key = `${l.fornecedor}-${l.nome}-${l.tipo}`
@@ -78,10 +78,37 @@ export default function Catalogo() {
         fornecedor: l.fornecedor,
         nome: l.nome,
         tipo: l.tipo,
-        lentes: []
+        lentes: [],
+        arKeys: new Set()
       }
     }
     groupedLentes[key].lentes.push(l)
+    if (l.precos) {
+      Object.keys(l.precos).forEach(k => groupedLentes[key].arKeys.add(k))
+    }
+  })
+
+  // Standardize AR key order for each group
+  const AR_PRIORITY = {
+    'duravision_gold': 1,
+    'duravision_platinum': 2,
+    'duravision_silver': 3,
+    'duravision_chrome': 4,
+    'crizal_prevencia': 10,
+    'crizal_saphire_hr': 11,
+    'crizal_rock': 12,
+    'crizal_easy_pro': 13,
+    'optifog': 14,
+    'trio_easy_clean': 15,
+    'sem_ar': 90,
+  }
+
+  Object.values(groupedLentes).forEach(group => {
+    group.arKeys = Array.from(group.arKeys).sort((a, b) => {
+      const pA = AR_PRIORITY[a] || 99
+      const pB = AR_PRIORITY[b] || 99
+      return pA - pB
+    })
   })
 
   return (
@@ -217,7 +244,7 @@ export default function Catalogo() {
                       <th>Índice</th>
                       <th>Material</th>
                       {/* Get all AR keys from this group */}
-                      {getGroupARKeys(group.lentes).map(ar => (
+                      {group.arKeys.map(ar => (
                         <th key={ar}>{getAntiReflexoLabel(ar)}</th>
                       ))}
                       <th>Esférico</th>
@@ -237,7 +264,7 @@ export default function Catalogo() {
                             <span className="badge badge-purple">{lente.indice}</span>
                           </td>
                           <td>{lente.material || '-'}</td>
-                          {getGroupARKeys(group.lentes).map(ar => (
+                          {group.arKeys.map(ar => (
                             <td key={ar} style={{ fontWeight: 600 }}>
                               {lente.precos?.[ar]
                                 ? formatCurrency(lente.precos[ar])
@@ -285,15 +312,6 @@ export default function Catalogo() {
   )
 }
 
-function getGroupARKeys(lentes) {
-  const keys = new Set()
-  lentes.forEach(l => {
-    if (l.precos) {
-      Object.keys(l.precos).forEach(k => keys.add(k))
-    }
-  })
-  return Array.from(keys)
-}
 
 function formatSpec(min, max) {
   if (min == null && max == null) return '-'

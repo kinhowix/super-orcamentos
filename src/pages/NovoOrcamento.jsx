@@ -96,46 +96,61 @@ export default function NovoOrcamento() {
       result = result.filter(l => l.tipo === 'multifocal')
     }
 
-    if (esf > 0 || cil > 0 || ad > 0) {
+    if (esf !== 0 || cil !== 0 || ad !== 0) {
       result = result.filter(l => {
         const spec = l.especificacoes
         if (!spec) return true
 
-        // Check grid-based availability (specific for Visão Simples models like Zeiss ClearView)
+        const esfOD = parseFloat(receita.od.esferico) || 0
+        const esfOE = parseFloat(receita.oe.esferico) || 0
+        const cilOD = Math.abs(parseFloat(receita.od.cilindro) || 0)
+        const cilOE = Math.abs(parseFloat(receita.oe.cilindro) || 0)
+        const adOD = Math.abs(parseFloat(receita.od.adicao) || 0)
+        const adOE = Math.abs(parseFloat(receita.oe.adicao) || 0)
+
+        // 1. Check grid-based availability (MANDATORY if useGrid is true)
         if (spec.useGrid && spec.grid) {
-          const checkEye = (eye) => {
-            const esfVal = (parseFloat(eye.esferico) || 0).toFixed(2)
-            const cilVal = Math.abs(parseFloat(eye.cilindro) || 0)
-            const gridRow = spec.grid[esfVal]
-            if (gridRow) {
-              // Check cylinder limit for this specific sphere
-              if (gridRow.maxCyl !== null && cilVal > Math.abs(gridRow.maxCyl)) return false
-              return true
+          const checkGridEye = (esfVal, cilVal) => {
+            const key = parseFloat(esfVal).toFixed(2)
+            const gridRow = spec.grid[key]
+            
+            // If sphere is NOT in grid, lens is incompatible
+            if (!gridRow) return false
+            
+            // Check specific cylinder limit for this sphere
+            if (gridRow.maxCyl !== null && gridRow.maxCyl !== undefined) {
+              const maxCyl = Math.abs(parseFloat(gridRow.maxCyl))
+              if (cilVal > maxCyl) return false
             }
-            return true 
+            return true
           }
-          if (!checkEye(receita.od) || !checkEye(receita.oe)) return false
-        }
-
-        // Global Check spherical range (fallback or primary for non-grid lenses)
-        if (esf > 0 && spec.esferico_min != null && spec.esferico_max != null) {
-          const eMin = parseFloat(spec.esferico_min)
-          const eMax = parseFloat(spec.esferico_max)
-          const esfOD = parseFloat(receita.od.esferico) || 0
-          const esfOE = parseFloat(receita.oe.esferico) || 0
           
-          if (esfOD < Math.min(eMin, eMax) || esfOD > Math.max(eMin, eMax)) return false
-          if (esfOE < Math.min(eMin, eMax) || esfOE > Math.max(eMin, eMax)) return false
+          if (!checkGridEye(esfOD, cilOD) || !checkGridEye(esfOE, cilOE)) return false
         }
 
-        // Global Check cylinder
-        if (cil > 0 && spec.cilindro_max != null) {
-          if (cil > Math.abs(spec.cilindro_max)) return false
+        // 2. Global Check spherical range
+        const eMin = spec.esferico_min !== "" && spec.esferico_min !== null ? parseFloat(spec.esferico_min) : null
+        const eMax = spec.esferico_max !== "" && spec.esferico_max !== null ? parseFloat(spec.esferico_max) : null
+        
+        if (eMin !== null && eMax !== null) {
+          const min = Math.min(eMin, eMax)
+          const max = Math.max(eMin, eMax)
+          if (esfOD < min || esfOD > max) return false
+          if (esfOE < min || esfOE > max) return false
         }
 
-        // Check addition (for multifocal)
+        // 3. Global Check cylinder (if not already handled by grid)
+        if (spec.cilindro_max !== "" && spec.cilindro_max !== null) {
+          const maxCyl = Math.abs(parseFloat(spec.cilindro_max))
+          if (cilOD > maxCyl || cilOE > maxCyl) return false
+        }
+
+        // 4. Global Check addition (for multifocal)
         if (ad > 0 && spec.adicao_min != null && spec.adicao_max != null) {
-          if (ad < spec.adicao_min || ad > spec.adicao_max) return false
+          const aMin = parseFloat(spec.adicao_min)
+          const aMax = parseFloat(spec.adicao_max)
+          if (adOD > 0 && (adOD < aMin || adOD > aMax)) return false
+          if (adOE > 0 && (adOE < aMin || adOE > aMax)) return false
         }
 
         return true
