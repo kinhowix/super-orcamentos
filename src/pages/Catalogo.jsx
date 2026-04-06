@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Search, Trash2, Edit3, Filter, Glasses, X } from 'lucide-react'
 import { useToast } from '../contexts/ToastContext'
 import { getLentes, deleteLente, formatCurrency, getAntiReflexoLabel } from '../services/dataStore'
 
 export default function Catalogo() {
   const toast = useToast()
+  const navigate = useNavigate()
   const [lentes, setLentes] = useState([])
   const [filteredLentes, setFilteredLentes] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -254,7 +256,14 @@ export default function Catalogo() {
                           )}
                           <td>{lente.especificacoes?.diametro || '-'}</td>
                           <td>{lente.especificacoes?.prisma || '-'}</td>
-                          <td>
+                          <td style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              className="btn btn-secondary btn-icon btn-sm"
+                              onClick={() => navigate(`/cadastro-lentes?edit=${lente.id}`)}
+                              title="Editar"
+                            >
+                              <Edit3 size={14} />
+                            </button>
                             <button
                               className="btn btn-danger btn-icon btn-sm"
                               onClick={() => handleDelete(lente.id)}
