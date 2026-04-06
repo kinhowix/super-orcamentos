@@ -38,6 +38,7 @@ export default function NovoOrcamento() {
   const [showOcrConfirm, setShowOcrConfirm] = useState(false)
   const [ocrResult, setOcrResult] = useState(null)
   const [ocrPreview, setOcrPreview] = useState(null)
+  const [parcelas, setParcelas] = useState(1)
 
 
   useEffect(() => {
@@ -355,9 +356,15 @@ export default function NovoOrcamento() {
 
     msg += `━━━━━━━━━━━━━━━━━━\n`
     msg += `*💰 Total: ${formatCurrency(total)}*\n`
+    
+    if (parcelas > 1) {
+      msg += `*💳 Pagamento:* ${parcelas}x de ${formatCurrency(total / parcelas)} sem juros\n`
+    } else {
+      msg += `*💳 Pagamento:* À vista no ${formatCurrency(total)}\n`
+    }
 
     if (observacoes) {
-      msg += `\n📝 ${observacoes}\n`
+      msg += `\n📝 *Obs:* ${observacoes}\n`
     }
 
     // Clean phone number for URL
@@ -376,7 +383,7 @@ export default function NovoOrcamento() {
         <p>Monte o orçamento de lentes para o cliente</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px' }}>
+      <div className="orcamento-layout">
         {/* Main Form */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Client Info */}
@@ -610,7 +617,7 @@ export default function NovoOrcamento() {
         </div>
 
         {/* Summary Sidebar */}
-        <div style={{ position: 'sticky', top: '32px', alignSelf: 'flex-start' }}>
+        <div className="orcamento-summary-sidebar">
           <div className="card" style={{ background: 'var(--gradient-card)' }}>
             <h3 className="card-title" style={{ marginBottom: '20px' }}>💰 Resumo</h3>
 
@@ -647,6 +654,26 @@ export default function NovoOrcamento() {
             <div className="divider" />
 
             <div className="form-group">
+              <label className="form-label">Condições de Pagamento</label>
+              <select 
+                className="form-select"
+                value={parcelas}
+                onChange={e => setParcelas(parseInt(e.target.value))}
+              >
+                {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                  <option key={n} value={n}>
+                    {n === 1 ? 'À vista' : `${n}x sem juros`}
+                  </option>
+                ))}
+              </select>
+              {parcelas > 1 && (
+                <div style={{ fontSize: '13px', marginTop: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  {parcelas}x de {formatCurrency(total / parcelas)}
+                </div>
+              )}
+            </div>
+
+            <div className="form-group">
               <label className="form-label">Observações</label>
               <textarea
                 className="form-textarea"
@@ -657,7 +684,7 @@ export default function NovoOrcamento() {
               />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className="summary-actions">
               <button className="btn btn-primary" onClick={() => handleSave('pendente')}>
                 <Save size={16} /> Salvar
               </button>
