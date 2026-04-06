@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Upload, Plus, Trash2, Save, FileText, Eye, 
-  ChevronDown, ChevronUp, Copy, AlertCircle, Check, Settings, GripVertical
+  ChevronDown, ChevronUp, Copy, AlertCircle, Check, Settings, GripVertical, ArrowLeft
 } from 'lucide-react'
 import { useToast } from '../contexts/ToastContext'
 import {
-  saveLente, saveLentesEmLote, getFornecedores, addFornecedor,
+  saveLente, saveLentesEmLote, getLenteById, getFornecedores, addFornecedor,
   getAntiReflexoLabel, formatCurrency,
   getNiveisARFornecedor, getNiveisARByFornecedor,
   saveNiveisARFornecedor, deleteNiveisARFornecedor
@@ -42,15 +43,13 @@ const EMPTY_INDICE = {
   precos: {}
 }
 
-const generateSphereRange = () => {
+const generateSphereRange = (max = 6.0, min = -8.0) => {
   const range = []
-  for (let s = 6.0; s >= -8.0; s -= 0.25) {
+  for (let s = max; s >= min; s -= 0.25) {
     range.push(s.toFixed(2))
   }
   return range
 }
-
-const SPH_RANGE = generateSphereRange()
 
 // Retorna os níveis de AR para um fornecedor (do config)
 function resolveNiveisAR(fornecedor, config = []) {
@@ -84,6 +83,10 @@ const EMPTY_LENTE = {
 
 export default function CadastroLentes() {
   const toast = useToast()
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const editId = searchParams.get('edit')
+  
   const fileInputRef = useRef(null)
   const [activeTab, setActiveTab] = useState('manual') // manual | pdf | lote | niveis_ar
   const [fornecedores, setFornecedores] = useState([])
@@ -120,11 +123,44 @@ export default function CadastroLentes() {
 
   useEffect(() => {
     async function loadConfig() {
-      setFornecedores(await getFornecedores())
-      setNiveisARConfig(await getNiveisARFornecedor())
+      const currentFornecedores = await getFornecedores()
+      const currentNiveisARConfig = await getNiveisARFornecedor()
+      setFornecedores(currentFornecedores)
+      setNiveisARConfig(currentNiveisARConfig)
+
+      if (editId) {
+        const existing = await getLenteById(editId)
+        if (existing) {
+          // Map database structure to form structure
+          setLente({
+            id: existing.id,
+            fornecedor: existing.fornecedor,
+            tipo: existing.tipo,
+            nome: existing.nome,
+            niveisAR: Object.keys(existing.precos || {}),
+            indices: [{
+              indice: existing.indice,
+              material: existing.material || '',
+              precos: existing.precos || {}
+            }],
+            especificacoes: {
+              esferico_min: existing.especificacoes?.esferico_min ?? '',
+              esferico_max: existing.especificacoes?.esferico_max ?? '',
+              cilindro_max: existing.especificacoes?.cilindro_max ?? '',
+              adicao_min: existing.especificacoes?.adicao_min ?? '',
+              adicao_max: existing.especificacoes?.adicao_max ?? '',
+              diametro: existing.especificacoes?.diametro ?? '',
+              prisma: existing.especificacoes?.prisma || 'Não',
+              useGrid: existing.especificacoes?.useGrid || false,
+              grid: existing.especificacoes?.grid || {}
+            }
+          })
+          setActiveTab('manual')
+        }
+      }
     }
     loadConfig()
-  }, [])
+  }, [editId])
 
   // ========== AR Levels Management ==========
   const getAllARLevels = () => {
@@ -247,34 +283,67 @@ export default function CadastroLentes() {
       return
     }
 
-    // Save each index as a separate lens entry for easier filtering
-    const lentesParaSalvar = lente.indices.map(indice => ({
-      fornecedor: lente.fornecedor,
-      tipo: lente.tipo,
-      nome: lente.nome,
-      indice: indice.indice,
-      material: indice.material,
-      precos: Object.fromEntries(
-        Object.entries(indice.precos)
-          .filter(([_, v]) => v && parseFloat(v) > 0)
+    // Bug Fix: Filter prices to save only the ones currently visible/selected in the AR columns
+    const filterPrecos = (precos) => {
+      return Object.fromEntries(
+        Object.entries(precos)
+          .filter(([k, v]) => lente.niveisAR.includes(k) && v && parseFloat(v) > 0)
           .map(([k, v]) => [k, parseFloat(v)])
-      ),
-      especificacoes: {
-        esferico_min: lente.especificacoes.esferico_min ? parseFloat(lente.especificacoes.esferico_min) : null,
-        esferico_max: lente.especificacoes.esferico_max ? parseFloat(lente.especificacoes.esferico_max) : null,
-        cilindro_max: lente.especificacoes.cilindro_max ? parseFloat(lente.especificacoes.cilindro_max) : null,
-        adicao_min: lente.especificacoes.adicao_min ? parseFloat(lente.especificacoes.adicao_min) : null,
-        adicao_max: lente.especificacoes.adicao_max ? parseFloat(lente.especificacoes.adicao_max) : null,
-        diametro: lente.especificacoes.diametro ? parseInt(lente.especificacoes.diametro) : null,
-        prisma: lente.especificacoes.prisma,
-        useGrid: lente.especificacoes.useGrid || false,
-        grid: lente.especificacoes.grid || {}
-      }
-    }))
+      )
+    }
 
-    await saveLentesEmLote(lentesParaSalvar)
-    toast.success(`${lentesParaSalvar.length} lente(s) cadastrada(s) com sucesso!`)
-    setLente({ ...EMPTY_LENTE })
+    if (lente.id) {
+      // UPDATE MODE (Single lens update)
+      const indice = lente.indices[0]
+      const updatedLente = {
+        id: lente.id,
+        fornecedor: lente.fornecedor,
+        tipo: lente.tipo,
+        nome: lente.nome,
+        indice: indice.indice,
+        material: indice.material,
+        precos: filterPrecos(indice.precos),
+        especificacoes: {
+          esferico_min: lente.especificacoes.esferico_min ? parseFloat(lente.especificacoes.esferico_min) : null,
+          esferico_max: lente.especificacoes.esferico_max ? parseFloat(lente.especificacoes.esferico_max) : null,
+          cilindro_max: lente.especificacoes.cilindro_max ? parseFloat(lente.especificacoes.cilindro_max) : null,
+          adicao_min: lente.especificacoes.adicao_min ? parseFloat(lente.especificacoes.adicao_min) : null,
+          adicao_max: lente.especificacoes.adicao_max ? parseFloat(lente.especificacoes.adicao_max) : null,
+          diametro: lente.especificacoes.diametro ? parseInt(lente.especificacoes.diametro) : null,
+          prisma: lente.especificacoes.prisma,
+          useGrid: lente.especificacoes.useGrid || false,
+          grid: lente.especificacoes.grid || {}
+        }
+      }
+      await saveLente(updatedLente)
+      toast.success('Lente atualizada com sucesso!')
+      navigate('/catalogo')
+    } else {
+      // CREATE MODE (Batch save indices as separate lenses)
+      const lentesParaSalvar = lente.indices.map(indice => ({
+        fornecedor: lente.fornecedor,
+        tipo: lente.tipo,
+        nome: lente.nome,
+        indice: indice.indice,
+        material: indice.material,
+        precos: filterPrecos(indice.precos),
+        especificacoes: {
+          esferico_min: lente.especificacoes.esferico_min ? parseFloat(lente.especificacoes.esferico_min) : null,
+          esferico_max: lente.especificacoes.esferico_max ? parseFloat(lente.especificacoes.esferico_max) : null,
+          cilindro_max: lente.especificacoes.cilindro_max ? parseFloat(lente.especificacoes.cilindro_max) : null,
+          adicao_min: lente.especificacoes.adicao_min ? parseFloat(lente.especificacoes.adicao_min) : null,
+          adicao_max: lente.especificacoes.adicao_max ? parseFloat(lente.especificacoes.adicao_max) : null,
+          diametro: lente.especificacoes.diametro ? parseInt(lente.especificacoes.diametro) : null,
+          prisma: lente.especificacoes.prisma,
+          useGrid: lente.especificacoes.useGrid || false,
+          grid: lente.especificacoes.grid || {}
+        }
+      }))
+
+      await saveLentesEmLote(lentesParaSalvar)
+      toast.success(`${lentesParaSalvar.length} lente(s) cadastrada(s) com sucesso!`)
+      setLente({ ...EMPTY_LENTE })
+    }
   }
 
   // ========== PDF Handlers ==========
@@ -660,7 +729,14 @@ function ManualForm({
   return (
     <div className="card">
       <div className="card-header">
-        <h3 className="card-title">📝 Cadastro Manual de Lente</h3>
+        <h3 className="card-title">
+          {lente.id ? '✏️ Editar Lente' : '📝 Cadastro Manual de Lente'}
+        </h3>
+        {lente.id && (
+          <button className="btn btn-secondary btn-sm" onClick={() => navigate('/catalogo')}>
+            <ArrowLeft size={14} /> Voltar ao Catálogo
+          </button>
+        )}
       </div>
 
       {/* Basic Info */}
@@ -968,7 +1044,7 @@ function ManualForm({
           Limpar
         </button>
         <button className="btn btn-primary" onClick={onSave}>
-          <Save size={16} /> Salvar Lente
+          <Save size={16} /> {lente.id ? 'Atualizar Lente' : 'Salvar Lente'}
         </button>
       </div>
     </div>
@@ -1749,25 +1825,40 @@ function NiveisARForm({
 function GridEditor({ grid, onChange }) {
   const [globalCyl, setGlobalCyl] = useState('')
   const [globalDiam, setGlobalDiam] = useState('')
+  const [maxSph, setMaxSph] = useState(6.0)
+  const [minSph, setMinSph] = useState(-8.0)
+
+  // Auto-detect range from existing grid keys
+  useEffect(() => {
+    const keys = Object.keys(grid).map(Number)
+    if (keys.length > 0) {
+      const currentMax = Math.max(...keys)
+      const currentMin = Math.min(...keys)
+      if (currentMax > maxSph) setMaxSph(currentMax)
+      if (currentMin < minSph) setMinSph(currentMin)
+    }
+  }, [grid])
+
+  const visibleRange = generateSphereRange(maxSph, minSph)
 
   const handleRowChange = (sph, field, value) => {
     const newGrid = { ...grid }
     if (!newGrid[sph]) newGrid[sph] = { maxCyl: null, diametro: null }
     
     if (field === 'maxCyl') {
-      newGrid[sph].maxCyl = value ? parseFloat(value) : null
+      newGrid[sph].maxCyl = (value !== "" && value !== null) ? parseFloat(value) : null
     } else {
-      newGrid[sph].diametro = value ? parseInt(value) : null
+      newGrid[sph].diametro = (value !== "" && value !== null) ? parseInt(value) : null
     }
     onChange(newGrid)
   }
 
   const applyGlobal = () => {
     const newGrid = { ...grid }
-    SPH_RANGE.forEach(sph => {
+    visibleRange.forEach(sph => {
       if (!newGrid[sph]) newGrid[sph] = { maxCyl: null, diametro: null }
-      if (globalCyl) newGrid[sph].maxCyl = parseFloat(globalCyl)
-      if (globalDiam) newGrid[sph].diametro = parseInt(globalDiam)
+      if (globalCyl !== "" && globalCyl !== null) newGrid[sph].maxCyl = parseFloat(globalCyl)
+      if (globalDiam !== "" && globalDiam !== null) newGrid[sph].diametro = parseInt(globalDiam)
     })
     onChange(newGrid)
   }
@@ -1824,7 +1915,20 @@ function GridEditor({ grid, onChange }) {
             </tr>
           </thead>
           <tbody>
-            {SPH_RANGE.map(sph => (
+            <tr style={{ background: 'rgba(99, 102, 241, 0.05)' }}>
+              <td colSpan="3" style={{ padding: '8px', textAlign: 'center' }}>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => setMaxSph(prev => prev + 1.0)}
+                  type="button"
+                  style={{ width: '100%', border: '1px dashed var(--accent-primary)' }}
+                >
+                  <Plus size={10} style={{ marginRight: '6px' }} /> 
+                  Expandir Grade Positiva (+1.00 grau)
+                </button>
+              </td>
+            </tr>
+            {visibleRange.map(sph => (
               <tr key={sph}>
                 <td style={{ fontWeight: 600 }}>{parseFloat(sph) > 0 ? `+${sph}` : sph}</td>
                 <td>
@@ -1833,7 +1937,7 @@ function GridEditor({ grid, onChange }) {
                     type="number" 
                     step="0.25"
                     placeholder="Mesmo da lente"
-                    value={grid[sph]?.maxCyl || ''}
+                    value={grid[sph]?.maxCyl ?? ''}
                     onChange={e => handleRowChange(sph, 'maxCyl', e.target.value)}
                   />
                 </td>
@@ -1842,12 +1946,25 @@ function GridEditor({ grid, onChange }) {
                     className="form-input form-input-sm" 
                     type="number" 
                     placeholder="70"
-                    value={grid[sph]?.diametro || ''}
+                    value={grid[sph]?.diametro ?? ''}
                     onChange={e => handleRowChange(sph, 'diametro', e.target.value)}
                   />
                 </td>
               </tr>
             ))}
+            <tr style={{ background: 'rgba(99, 102, 241, 0.05)' }}>
+              <td colSpan="3" style={{ padding: '8px', textAlign: 'center' }}>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => setMinSph(prev => prev - 1.0)}
+                  type="button"
+                  style={{ width: '100%', border: '1px dashed var(--accent-primary)' }}
+                >
+                  <Plus size={10} style={{ marginRight: '6px' }} /> 
+                  Expandir Grade Negativa (-1.00 grau)
+                </button>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
