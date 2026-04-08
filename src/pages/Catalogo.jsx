@@ -13,6 +13,8 @@ export default function Catalogo() {
   const [filterFornecedor, setFilterFornecedor] = useState('')
   const [filterTipo, setFilterTipo] = useState('')
   const [filterIndice, setFilterIndice] = useState('')
+  const [filterFotossensivel, setFilterFotossensivel] = useState(false)
+  const [filterFiltroAzul, setFilterFiltroAzul] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [selectedLente, setSelectedLente] = useState(null)
 
@@ -22,7 +24,7 @@ export default function Catalogo() {
 
   useEffect(() => {
     applyFilters()
-  }, [lentes, searchTerm, filterFornecedor, filterTipo, filterIndice])
+  }, [lentes, searchTerm, filterFornecedor, filterTipo, filterIndice, filterFotossensivel, filterFiltroAzul])
 
   async function loadLentes() {
     const data = await getLentes()
@@ -53,6 +55,14 @@ export default function Catalogo() {
     if (filterIndice) {
       result = result.filter(l => l.indice === filterIndice)
     }
+    
+    if (filterFotossensivel) {
+      result = result.filter(l => l.especificacoes?.fotossensivel === true)
+    }
+
+    if (filterFiltroAzul) {
+      result = result.filter(l => l.especificacoes?.filtroAzul === true)
+    }
 
     setFilteredLentes(result)
   }
@@ -67,7 +77,7 @@ export default function Catalogo() {
 
   const fornecedores = [...new Set(lentes.map(l => l.fornecedor).filter(Boolean))]
   const indices = [...new Set(lentes.map(l => l.indice).filter(Boolean))].sort()
-  const activeFilters = [filterFornecedor, filterTipo, filterIndice].filter(Boolean).length
+  const activeFilters = [filterFornecedor, filterTipo, filterIndice, filterFotossensivel, filterFiltroAzul].filter(Boolean).length
 
   // Group lenses and pre-calculate AR keys for each group
   const groupedLentes = {}
@@ -79,10 +89,15 @@ export default function Catalogo() {
         nome: l.nome,
         tipo: l.tipo,
         lentes: [],
-        arKeys: new Set()
+        arKeys: new Set(),
+        fotossensivel: !!l.especificacoes?.fotossensivel,
+        filtroAzul: !!l.especificacoes?.filtroAzul
       }
     }
     groupedLentes[key].lentes.push(l)
+    if (l.especificacoes?.fotossensivel) groupedLentes[key].fotossensivel = true
+    if (l.especificacoes?.filtroAzul) groupedLentes[key].filtroAzul = true
+    
     if (l.precos) {
       Object.keys(l.precos).forEach(k => groupedLentes[key].arKeys.add(k))
     }
@@ -190,6 +205,17 @@ export default function Catalogo() {
               </select>
             </div>
           </div>
+          
+          <div className="form-row" style={{ marginTop: '12px', gap: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setFilterFotossensivel(!filterFotossensivel)}>
+              <input type="checkbox" checked={filterFotossensivel} onChange={() => {}} style={{ width: '16px', height: '16px', pointerEvents: 'none' }} />
+              <label style={{ fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>Fotossensível</label>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setFilterFiltroAzul(!filterFiltroAzul)}>
+              <input type="checkbox" checked={filterFiltroAzul} onChange={() => {}} style={{ width: '16px', height: '16px', pointerEvents: 'none' }} />
+              <label style={{ fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>Filtro Luz Azul</label>
+            </div>
+          </div>
           {activeFilters > 0 && (
             <button
               className="btn btn-secondary btn-sm"
@@ -198,6 +224,8 @@ export default function Catalogo() {
                 setFilterFornecedor('')
                 setFilterTipo('')
                 setFilterIndice('')
+                setFilterFotossensivel(false)
+                setFilterFiltroAzul(false)
               }}
             >
               <X size={14} /> Limpar Filtros
@@ -230,6 +258,16 @@ export default function Catalogo() {
                     <span className={`badge ${group.tipo === 'multifocal' ? 'badge-purple' : 'badge-cyan'}`}>
                       {group.tipo === 'multifocal' ? 'Multifocal' : 'Visão Simples'}
                     </span>
+                    {group.fotossensivel && (
+                      <span className="badge badge-amber" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        🌟 Fotossensível
+                      </span>
+                    )}
+                    {group.filtroAzul && (
+                      <span className="badge badge-blue" style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--accent-primary-bg)', color: 'var(--accent-primary-hover)' }}>
+                        🔵 Filtro Azul
+                      </span>
+                    )}
                   </div>
                   <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                     {group.fornecedor} • {group.lentes.length} variação(ões)

@@ -39,6 +39,13 @@ export default function NovoOrcamento() {
   const [ocrResult, setOcrResult] = useState(null)
   const [ocrPreview, setOcrPreview] = useState(null)
   const [parcelas, setParcelas] = useState(1)
+  
+  // Selection Filters
+  const [filterIndex, setFilterIndex] = useState('')
+  const [filterFornecedor, setFilterFornecedor] = useState('')
+  const [filterPrecoMax, setFilterPrecoMax] = useState('')
+  const [filterFotossensivel, setFilterFotossensivel] = useState(false)
+  const [filterFiltroAzul, setFilterFiltroAzul] = useState(false)
 
 
   useEffect(() => {
@@ -158,6 +165,36 @@ export default function NovoOrcamento() {
       })
     }
 
+    // 5. Apply User Filters (Optional)
+    if (filterIndex) {
+      result = result.filter(l => l.indice === filterIndex)
+    }
+
+    if (filterFornecedor) {
+      result = result.filter(l => l.fornecedor === filterFornecedor)
+    }
+
+    if (filterPrecoMax) {
+      const max = parseFloat(filterPrecoMax)
+      if (!isNaN(max)) {
+        result = result.filter(l => {
+          const prices = Object.values(l.precos || {})
+          if (prices.length === 0) return true
+          const minPrice = Math.min(...prices)
+          return minPrice <= max
+        })
+      }
+    }
+
+    // 6. Filter by Extra Features (Fotossensível / Filtro Azul)
+    if (filterFotossensivel) {
+      result = result.filter(l => l.especificacoes?.fotossensivel === true)
+    }
+
+    if (filterFiltroAzul) {
+      result = result.filter(l => l.especificacoes?.filtroAzul === true)
+    }
+
     return result
   }
 
@@ -178,7 +215,52 @@ export default function NovoOrcamento() {
       groups[key].lentes.push(l)
     })
     return groups
-  }, [lentes, searchLente, receita])
+  }, [lentes, searchLente, receita, filterIndex, filterFornecedor, filterPrecoMax, filterFotossensivel, filterFiltroAzul])
+
+  // Get unique indices and vendors from compatible lenses (pre-filter)
+  const filterOptions = useMemo(() => {
+    // We want the options based on prescription compatibility ONLY, 
+    // so the user can see what's available for their degree
+    const compatibleWithDegree = lentes.filter(l => {
+        // Simple version of getCompatibleLenses logic just for degree
+        const esfOD = parseFloat(receita.od.esferico) || 0
+        const esfOE = parseFloat(receita.oe.esferico) || 0
+        const cilOD = Math.abs(parseFloat(receita.od.cilindro) || 0)
+        const cilOE = Math.abs(parseFloat(receita.oe.cilindro) || 0)
+        const ad = Math.max(Math.abs(parseFloat(receita.od.adicao)||0), Math.abs(parseFloat(receita.oe.adicao)||0))
+        
+        if (ad === 0 && l.tipo === 'multifocal') return false
+        if (ad > 0 && l.tipo !== 'multifocal') return false
+
+        const spec = l.especificacoes
+        if (!spec) return true
+
+        if (spec.useGrid && spec.grid) {
+            const checkGrid = (esf, cil) => {
+                const row = spec.grid[parseFloat(esf).toFixed(2)]
+                if (!row) return false
+                if (row.maxCyl != null && cil > Math.abs(parseFloat(row.maxCyl))) return false
+                return true
+            }
+            if (!checkGrid(esfOD, cilOD) || !checkGrid(esfOE, cilOE)) return false
+        }
+        return true
+    })
+
+    return {
+      indices: [...new Set(compatibleWithDegree.map(l => l.indice))].sort(),
+      fornecedores: [...new Set(compatibleWithDegree.map(l => l.fornecedor))].sort()
+    }
+  }, [lentes, receita])
+
+  const clearFilters = () => {
+    setSearchLente('')
+    setFilterIndex('')
+    setFilterFornecedor('')
+    setFilterPrecoMax('')
+    setFilterFotossensivel(false)
+    setFilterFiltroAzul(false)
+  }
 
   const handleSelectLente = (lente) => {
     const arKeys = Object.keys(lente.precos || {})
@@ -705,15 +787,86 @@ export default function NovoOrcamento() {
               <button className="modal-close" onClick={() => setShowLenteSelector(false)}>×</button>
             </div>
 
-            <div className="search-box" style={{ marginBottom: '16px' }}>
+            <div className="search-box" style={{ marginBottom: '12px' }}>
               <Search size={16} className="search-icon" />
               <input
                 className="form-input"
-                placeholder="Buscar por nome ou fornecedor..."
+                placeholder="Buscar por nome ou modelo..."
                 value={searchLente}
                 onChange={e => setSearchLente(e.target.value)}
                 autoFocus
               />
+            </div>
+
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+              gap: '12px', 
+              marginBottom: '20px',
+              padding: '16px',
+              background: 'rgba(255, 255, 255, 0.03)', /* Sub-glass effect */
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: 'inset 0 0 12px rgba(255, 255, 255, 0.02)'
+            }}>
+              <div>
+                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Índice</label>
+                <select 
+                   className="form-select" 
+                   style={{ padding: '8px 12px', fontSize: '13px', background: 'rgba(0, 0, 0, 0.2)' }}
+                   value={filterIndex}
+                   onChange={e => setFilterIndex(e.target.value)}
+                >
+                  <option value="">Todos</option>
+                  {filterOptions.indices.map(idx => <option key={idx} value={idx}>{idx}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Marca/Fornecedor</label>
+                <select 
+                   className="form-select" 
+                   style={{ padding: '8px 12px', fontSize: '13px', background: 'rgba(0, 0, 0, 0.2)' }}
+                   value={filterFornecedor}
+                   onChange={e => setFilterFornecedor(e.target.value)}
+                >
+                  <option value="">Todas</option>
+                  {filterOptions.fornecedores.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Preço Máximo</label>
+                <input 
+                   type="number"
+                   className="form-input" 
+                   style={{ padding: '8px 12px', fontSize: '13px', background: 'rgba(0, 0, 0, 0.2)' }}
+                   placeholder="Até R$..."
+                   value={filterPrecoMax}
+                   onChange={e => setFilterPrecoMax(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setFilterFotossensivel(!filterFotossensivel)}>
+                  <input type="checkbox" checked={filterFotossensivel} onChange={() => {}} style={{ width: '16px', height: '16px', pointerEvents: 'none' }} />
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>Fotossensível</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setFilterFiltroAzul(!filterFiltroAzul)}>
+                  <input type="checkbox" checked={filterFiltroAzul} onChange={() => {}} style={{ width: '16px', height: '16px', pointerEvents: 'none' }} />
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>Filtro Azul</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ width: '100%', padding: '8px', fontSize: '12px', height: '38px', borderRadius: 'var(--radius-sm)' }}
+                  onClick={clearFilters}
+                >
+                  Limpar Filtros
+                </button>
+              </div>
             </div>
 
             <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px' }}>
@@ -731,7 +884,17 @@ export default function NovoOrcamento() {
                     marginBottom: '8px',
                     color: 'var(--text-secondary)',
                   }}>
-                    {group.fornecedor} - {group.nome}
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {group.nome}
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            {group.lentes.some(l => l.especificacoes?.fotossensivel) && (
+                              <span title="Fotossensível" style={{ fontSize: '10px', background: 'var(--accent-amber-bg)', color: 'var(--accent-amber)', padding: '2px 6px', borderRadius: '4px' }}>🌟 Foto</span>
+                            )}
+                            {group.lentes.some(l => l.especificacoes?.filtroAzul) && (
+                              <span title="Filtro Azul" style={{ fontSize: '10px', background: 'var(--accent-primary-bg)', color: 'var(--accent-primary-hover)', padding: '2px 6px', borderRadius: '4px' }}>🔵 Azul</span>
+                            )}
+                          </div>
+                        </div>
                     <span className={`badge ${group.tipo === 'multifocal' ? 'badge-purple' : 'badge-cyan'}`}
                       style={{ marginLeft: '8px' }}>
                       {group.tipo === 'multifocal' ? 'Multi' : 'VS'}
