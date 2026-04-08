@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { 
-  Search, Trash2, Eye, Send, CheckCircle, Clock, 
-  MessageCircle, Filter, X, FileText, TrendingUp 
+import {
+  Search, Trash2, Eye, Send, CheckCircle, Clock,
+  MessageCircle, Filter, X, FileText, TrendingUp
 } from 'lucide-react'
 import { useToast } from '../contexts/ToastContext'
 import {
@@ -66,9 +66,9 @@ export default function Orcamentos() {
     msg += `━━━━━━━━━━━━━━━━━━\n`
     msg += `*Cliente:* ${orc.cliente?.nome}\n`
 
-    const rec = orc.receita || (orc.itens?.[0]?.olhoDireito ? { 
-      od: orc.itens[0].olhoDireito, 
-      oe: orc.itens[0].olhoEsquerdo 
+    const rec = orc.receita || (orc.itens?.[0]?.olhoDireito ? {
+      od: orc.itens[0].olhoDireito,
+      oe: orc.itens[0].olhoEsquerdo
     } : null);
 
     if (rec) {
@@ -76,7 +76,7 @@ export default function Orcamentos() {
       msg += `OD: ${rec.od?.esferico || '0.00'}/${rec.od?.cilindro || '0.00'} Eixo: ${rec.od?.eixo || '0'}° Add: ${rec.od?.adicao || '0.00'}\n`
       msg += `OE: ${rec.oe?.esferico || '0.00'}/${rec.oe?.cilindro || '0.00'} Eixo: ${rec.oe?.eixo || '0'}° Add: ${rec.oe?.adicao || '0.00'}\n`
     }
-    
+
     msg += `\n`
 
     orc.itens?.forEach((item, idx) => {
@@ -113,7 +113,8 @@ export default function Orcamentos() {
         <p>{orcamentos.length} orçamento(s) registrado(s)</p>
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .stats-grid-small {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
@@ -248,13 +249,11 @@ export default function Orcamentos() {
                       {orc.cliente?.nome || 'Sem nome'}
                     </div>
                     <div style={{ color: 'var(--text-muted)', fontSize: '13px', display: 'flex', gap: '12px' }}>
-                      <span>{orc.itens?.length || 0} opção(ões)</span>
-                      <span>•</span>
+
                       <span>{new Date(orc.createdAt).toLocaleDateString('pt-BR')}</span>
                       {orc.cliente?.telefone && (
                         <>
-                          <span>•</span>
-                          <span>{orc.cliente.telefone}</span>
+
                         </>
                       )}
                     </div>
@@ -263,7 +262,7 @@ export default function Orcamentos() {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ textAlign: 'right', marginRight: '8px' }}>
-                    <div style={{ fontWeight: 700, fontSize: '18px', color: 'var(--accent-green)' }}>
+                    <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--accent-green)' }}>
                       {formatCurrency(orc.total || 0)}
                     </div>
                     <StatusBadge status={orc.status} />
@@ -326,7 +325,7 @@ export default function Orcamentos() {
                     {selectedOrc.cliente?.nome}
                   </h3>
                   <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                    {selectedOrc.cliente?.telefone || 'Sem telefone'} • 
+                    {selectedOrc.cliente?.telefone || 'Sem telefone'} •
                     {new Date(selectedOrc.createdAt).toLocaleDateString('pt-BR')}
                   </span>
                 </div>
@@ -338,9 +337,9 @@ export default function Orcamentos() {
 
             {/* Prescription Display */}
             {(() => {
-              const rec = selectedOrc.receita || (selectedOrc.itens?.[0]?.olhoDireito ? { 
-                od: selectedOrc.itens[0].olhoDireito, 
-                oe: selectedOrc.itens[0].olhoEsquerdo 
+              const rec = selectedOrc.receita || (selectedOrc.itens?.[0]?.olhoDireito ? {
+                od: selectedOrc.itens[0].olhoDireito,
+                oe: selectedOrc.itens[0].olhoEsquerdo
               } : null);
 
               if (!rec) return null;

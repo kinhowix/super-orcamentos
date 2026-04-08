@@ -461,7 +461,7 @@ body {
 }
 
 .stat-info p {
-  font-size: 13px;
+  font-size: 10px;
   color: var(--text-secondary);
   font-weight: 500;
 }
