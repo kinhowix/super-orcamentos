@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { 
-  Glasses, FileText, TrendingUp, Users, 
+import {
+  Glasses, FileText, TrendingUp, Users,
   PlusCircle, ArrowRight, Clock
 } from 'lucide-react'
 import { getLentes, getOrcamentos, formatCurrency } from '../services/dataStore'
@@ -31,51 +31,11 @@ export default function Dashboard() {
 
   return (
     <div className="animate-in">
-      <div className="page-header">
-        <h1>Dashboard</h1>
-        <p>Visão geral do sistema de orçamentos</p>
-      </div>
+      <div style={{ marginTop: '24px' }}></div>
 
-      <div className="stats-grid">
-        <div className="stat-card purple">
-          <div className="stat-icon purple">
-            <Glasses size={22} />
-          </div>
-          <div className="stat-info">
-            <h3>{totalLentes}</h3>
-            <p>Lentes Cadastradas</p>
-          </div>
-        </div>
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
 
-        <div className="stat-card green">
-          <div className="stat-icon green">
-            <FileText size={22} />
-          </div>
-          <div className="stat-info">
-            <h3>{totalOrcamentos}</h3>
-            <p>Orçamentos Criados</p>
-          </div>
-        </div>
 
-        <div className="stat-card amber">
-          <div className="stat-icon amber">
-            <TrendingUp size={22} />
-          </div>
-          <div className="stat-info">
-            <h3>{formatCurrency(valorTotal)}</h3>
-            <p>Valor Total</p>
-          </div>
-        </div>
-
-        <div className="stat-card cyan">
-          <div className="stat-icon cyan">
-            <Clock size={22} />
-          </div>
-          <div className="stat-info">
-            <h3>{orcamentosPendentes}</h3>
-            <p>Pendentes</p>
-          </div>
-        </div>
       </div>
 
       <div className="content-grid">
@@ -85,8 +45,8 @@ export default function Dashboard() {
             <h3 className="card-title">Ações Rápidas</h3>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <button 
-              className="btn btn-primary btn-lg" 
+            <button
+              className="btn btn-primary btn-lg"
               style={{ width: '100%', justifyContent: 'space-between' }}
               onClick={() => navigate('/novo-orcamento')}
             >
@@ -95,8 +55,8 @@ export default function Dashboard() {
               </span>
               <ArrowRight size={18} />
             </button>
-            <button 
-              className="btn btn-secondary btn-lg" 
+            <button
+              className="btn btn-secondary btn-lg"
               style={{ width: '100%', justifyContent: 'space-between' }}
               onClick={() => navigate('/cadastro-lentes')}
             >
@@ -105,8 +65,8 @@ export default function Dashboard() {
               </span>
               <ArrowRight size={18} />
             </button>
-            <button 
-              className="btn btn-secondary btn-lg" 
+            <button
+              className="btn btn-secondary btn-lg"
               style={{ width: '100%', justifyContent: 'space-between' }}
               onClick={() => navigate('/catalogo')}
             >
@@ -128,7 +88,7 @@ export default function Dashboard() {
               </button>
             )}
           </div>
-          
+
           {orcamentosRecentes.length === 0 ? (
             <div className="empty-state" style={{ padding: '30px 10px' }}>
               <div className="empty-state-icon">📋</div>
@@ -152,12 +112,11 @@ export default function Dashboard() {
                       <td style={{ fontWeight: 600 }}>{orc.cliente?.nome || 'Sem nome'}</td>
                       <td style={{ fontWeight: 600 }}>{formatCurrency(orc.total || 0)}</td>
                       <td>
-                        <span className={`badge ${
-                          orc.status === 'aprovado' ? 'badge-green' :
-                          orc.status === 'enviado' ? 'badge-amber' : 'badge-purple'
-                        }`}>
+                        <span className={`badge ${orc.status === 'aprovado' ? 'badge-green' :
+                            orc.status === 'enviado' ? 'badge-amber' : 'badge-purple'
+                          }`}>
                           {orc.status === 'aprovado' ? 'Aprovado' :
-                           orc.status === 'enviado' ? 'Enviado' : 'Pendente'}
+                            orc.status === 'enviado' ? 'Enviado' : 'Pendente'}
                         </span>
                       </td>
                       <td style={{ color: 'var(--text-muted)', fontSize: '13px' }}>

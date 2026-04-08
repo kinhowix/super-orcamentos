@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { 
   Search, Trash2, Eye, Send, CheckCircle, Clock, 
-  MessageCircle, Filter, X 
+  MessageCircle, Filter, X, FileText, TrendingUp 
 } from 'lucide-react'
 import { useToast } from '../contexts/ToastContext'
 import {
@@ -102,11 +102,85 @@ export default function Orcamentos() {
     window.open(url, '_blank')
   }
 
+  const totalOrcamentos = orcamentos.length
+  const valorTotal = orcamentos.reduce((sum, o) => sum + (o.total || 0), 0)
+  const orcamentosPendentes = orcamentos.filter(o => o.status === 'pendente').length
+
   return (
     <div className="animate-in">
       <div className="page-header">
         <h1>Orçamentos</h1>
         <p>{orcamentos.length} orçamento(s) registrado(s)</p>
+      </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        .stats-grid-small {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+          margin-bottom: 20px;
+        }
+        .stat-card-small {
+          padding: 12px 16px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: var(--bg-card);
+          border-radius: var(--radius-md);
+          border: 1px solid var(--border-color);
+        }
+        .stat-icon-small {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justifyContent: center;
+        }
+        .stat-info-small h3 {
+          font-size: 16px;
+          margin: 0;
+          line-height: 1.2;
+        }
+        .stat-info-small p {
+          font-size: 11px;
+          margin: 0;
+          color: var(--text-secondary);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+      `}} />
+
+      <div className="stats-grid-small">
+        <div className="stat-card-small">
+          <div className="stat-icon-small green" style={{ background: 'var(--accent-green-bg)', color: 'var(--accent-green)' }}>
+            <FileText size={18} />
+          </div>
+          <div className="stat-info-small">
+            <h3>{totalOrcamentos}</h3>
+            <p>Gerados</p>
+          </div>
+        </div>
+
+        <div className="stat-card-small">
+          <div className="stat-icon-small amber" style={{ background: 'var(--accent-amber-bg)', color: 'var(--accent-amber)' }}>
+            <TrendingUp size={18} />
+          </div>
+          <div className="stat-info-small">
+            <h3>{formatCurrency(valorTotal)}</h3>
+            <p>Valor Total</p>
+          </div>
+        </div>
+
+        <div className="stat-card-small">
+          <div className="stat-icon-small purple" style={{ background: 'var(--accent-primary-bg)', color: 'var(--accent-primary-hover)' }}>
+            <Clock size={18} />
+          </div>
+          <div className="stat-info-small">
+            <h3>{orcamentosPendentes}</h3>
+            <p>Pendentes</p>
+          </div>
+        </div>
       </div>
 
       {/* Search & Filters */}
