@@ -77,7 +77,9 @@ const EMPTY_LENTE = {
     diametro: '',
     prisma: 'Não',
     useGrid: false,
-    grid: {}
+    grid: {},
+    fotossensivel: false,
+    filtroAzul: false
   }
 }
 
@@ -152,7 +154,9 @@ export default function CadastroLentes() {
               diametro: existing.especificacoes?.diametro ?? '',
               prisma: existing.especificacoes?.prisma || 'Não',
               useGrid: existing.especificacoes?.useGrid || false,
-              grid: existing.especificacoes?.grid || {}
+              grid: existing.especificacoes?.grid || {},
+              fotossensivel: existing.especificacoes?.fotossensivel || false,
+              filtroAzul: existing.especificacoes?.filtroAzul || false
             }
           })
           setActiveTab('manual')
@@ -312,7 +316,9 @@ export default function CadastroLentes() {
           diametro: lente.especificacoes.diametro ? parseInt(lente.especificacoes.diametro) : null,
           prisma: lente.especificacoes.prisma,
           useGrid: lente.especificacoes.useGrid || false,
-          grid: lente.especificacoes.grid || {}
+          grid: lente.especificacoes.grid || {},
+          fotossensivel: lente.especificacoes.fotossensivel,
+          filtroAzul: lente.especificacoes.filtroAzul
         }
       }
       await saveLente(updatedLente)
@@ -336,7 +342,9 @@ export default function CadastroLentes() {
           diametro: lente.especificacoes.diametro ? parseInt(lente.especificacoes.diametro) : null,
           prisma: lente.especificacoes.prisma,
           useGrid: lente.especificacoes.useGrid || false,
-          grid: lente.especificacoes.grid || {}
+          grid: lente.especificacoes.grid || {},
+          fotossensivel: lente.especificacoes.fotossensivel,
+          filtroAzul: lente.especificacoes.filtroAzul
         }
       }))
 
@@ -409,6 +417,10 @@ export default function CadastroLentes() {
         adicao_max: '',
         diametro: '',
         prisma: 'Não',
+        useGrid: false,
+        grid: {},
+        fotossensivel: false,
+        filtroAzul: false,
         rawText: row.text || cells.join(' | '),
       }
     })
@@ -433,6 +445,8 @@ export default function CadastroLentes() {
       prisma: 'Não',
       useGrid: false,
       grid: {},
+      fotossensivel: false,
+      filtroAzul: false,
       rawText: '',
     }
   }
@@ -504,7 +518,9 @@ export default function CadastroLentes() {
           diametro: l.diametro ? parseInt(l.diametro) : null,
           prisma: l.prisma,
           useGrid: l.useGrid || false,
-          grid: l.grid || {}
+          grid: l.grid || {},
+          fotossensivel: l.fotossensivel,
+          filtroAzul: l.filtroAzul
         }
       }))
 
@@ -798,6 +814,34 @@ function ManualForm({
             value={lente.nome}
             onChange={e => onLenteChange('nome', e.target.value)}
           />
+        </div>
+      </div>
+
+      {/* Características Extras */}
+      <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '-10px', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <input 
+            type="checkbox" 
+            id="fotossensivel"
+            checked={lente.especificacoes.fotossensivel}
+            onChange={e => onSpecChange('fotossensivel', e.target.checked)}
+            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+          />
+          <label htmlFor="fotossensivel" style={{ fontWeight: 500, cursor: 'pointer' }}>
+            Lente Fotossensível (Transitions / Photocromática)
+          </label>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <input 
+            type="checkbox" 
+            id="filtroAzul"
+            checked={lente.especificacoes.filtroAzul}
+            onChange={e => onSpecChange('filtroAzul', e.target.checked)}
+            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+          />
+          <label htmlFor="filtroAzul" style={{ fontWeight: 500, cursor: 'pointer' }}>
+            Tem Filtro de Luz Azul
+          </label>
         </div>
       </div>
 
@@ -1267,6 +1311,38 @@ function LoteForm({
         </div>
       </div>
 
+      <div className="form-row" style={{ marginTop: '-10px', marginBottom: '15px' }}>
+        <div style={{ display: 'flex', gap: '20px' }}>
+          <button 
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              loteLentes.forEach((_, i) => onLoteChange(i, 'fotossensivel', true));
+            }}
+          >
+            🌟 Marcar todas como Fotossensível
+          </button>
+          <button 
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              loteLentes.forEach((_, i) => onLoteChange(i, 'filtroAzul', true));
+            }}
+          >
+            🔵 Marcar todas como Filtro Azul
+          </button>
+          <button 
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              loteLentes.forEach((_, i) => {
+                onLoteChange(i, 'fotossensivel', false);
+                onLoteChange(i, 'filtroAzul', false);
+              });
+            }}
+          >
+            🧹 Limpar Extras
+          </button>
+        </div>
+      </div>
+
       {/* AR Columns Selection */}
       <div className="form-group">
         <label className="form-label">Colunas de Antirreflexo</label>
@@ -1333,6 +1409,8 @@ function LoteForm({
               )}
               <th style={{ minWidth: '60px' }}>Ø</th>
               <th style={{ minWidth: '60px' }}>Prisma</th>
+              <th style={{ minWidth: '40px' }} title="Fotossensível">F</th>
+              <th style={{ minWidth: '40px' }} title="Filtro Azul">LA</th>
               {loteTipo === 'visao_simples' && <th style={{ minWidth: '60px' }}>Grade</th>}
               <th style={{ width: '40px' }}></th>
             </tr>
@@ -1450,6 +1528,22 @@ function LoteForm({
                     <option value="Não">Não</option>
                     <option value="Sim">Sim</option>
                   </select>
+                </td>
+                <td>
+                  <input 
+                    type="checkbox"
+                    checked={item.fotossensivel}
+                    onChange={e => onLoteChange(idx, 'fotossensivel', e.target.checked)}
+                    style={{ width: '16px', height: '16px' }}
+                  />
+                </td>
+                <td>
+                  <input 
+                    type="checkbox"
+                    checked={item.filtroAzul}
+                    onChange={e => onLoteChange(idx, 'filtroAzul', e.target.checked)}
+                    style={{ width: '16px', height: '16px' }}
+                  />
                 </td>
                 {loteTipo === 'visao_simples' && (
                   <td>

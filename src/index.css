@@ -2,10 +2,13 @@
 
 :root {
   /* Colors - Login "Deep Space" Vibe (Blue/Purple/Glass) */
-  --bg-primary: #0f172a; /* Deep Navy */
+  --bg-primary: #0f172a;
+  /* Deep Navy */
   --bg-secondary: #0a0a0a;
-  --bg-tertiary: #1e1b4b; /* Deep Purple */
-  --bg-card: rgba(255, 255, 255, 0.05); /* Glass base */
+  --bg-tertiary: #1e1b4b;
+  /* Deep Purple */
+  --bg-card: rgba(255, 255, 255, 0.05);
+  /* Glass base */
   --bg-glass: rgba(255, 255, 255, 0.03);
   --bg-glass-hover: rgba(255, 255, 255, 0.1);
 
@@ -18,10 +21,12 @@
   --text-accent: #3b82f6;
 
   /* Accent Colors */
-  --accent-primary: #3b82f6; /* Login Blue */
+  --accent-primary: #3b82f6;
+  /* Login Blue */
   --accent-primary-hover: #2563eb;
   --accent-primary-bg: rgba(59, 130, 246, 0.15);
-  --accent-secondary: #8b5cf6; /* Vibrant Purple */
+  --accent-secondary: #8b5cf6;
+  /* Vibrant Purple */
   --accent-green: #10b981;
   --accent-green-bg: rgba(16, 185, 129, 0.1);
   --accent-amber: #f59e0b;
@@ -32,7 +37,8 @@
   --accent-cyan-bg: rgba(14, 165, 233, 0.1);
 
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); /* Blue to Purple */
+  --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  /* Blue to Purple */
   --gradient-success: linear-gradient(135deg, #059669 0%, #10b981 100%);
   --gradient-warm: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
   --gradient-card: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
@@ -751,7 +757,8 @@ body {
 }
 
 .modal {
-  background: var(--bg-card);
+
+  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--border-color);

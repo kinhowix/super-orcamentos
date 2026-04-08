@@ -44,6 +44,8 @@ export default function NovoOrcamento() {
   const [filterIndex, setFilterIndex] = useState('')
   const [filterFornecedor, setFilterFornecedor] = useState('')
   const [filterPrecoMax, setFilterPrecoMax] = useState('')
+  const [filterFotossensivel, setFilterFotossensivel] = useState(false)
+  const [filterFiltroAzul, setFilterFiltroAzul] = useState(false)
 
 
   useEffect(() => {
@@ -184,6 +186,15 @@ export default function NovoOrcamento() {
       }
     }
 
+    // 6. Filter by Extra Features (Fotossensível / Filtro Azul)
+    if (filterFotossensivel) {
+      result = result.filter(l => l.especificacoes?.fotossensivel === true)
+    }
+
+    if (filterFiltroAzul) {
+      result = result.filter(l => l.especificacoes?.filtroAzul === true)
+    }
+
     return result
   }
 
@@ -204,7 +215,7 @@ export default function NovoOrcamento() {
       groups[key].lentes.push(l)
     })
     return groups
-  }, [lentes, searchLente, receita, filterIndex, filterFornecedor, filterPrecoMax])
+  }, [lentes, searchLente, receita, filterIndex, filterFornecedor, filterPrecoMax, filterFotossensivel, filterFiltroAzul])
 
   // Get unique indices and vendors from compatible lenses (pre-filter)
   const filterOptions = useMemo(() => {
@@ -247,6 +258,8 @@ export default function NovoOrcamento() {
     setFilterIndex('')
     setFilterFornecedor('')
     setFilterPrecoMax('')
+    setFilterFotossensivel(false)
+    setFilterFiltroAzul(false)
   }
 
   const handleSelectLente = (lente) => {
@@ -834,6 +847,17 @@ export default function NovoOrcamento() {
                 />
               </div>
 
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setFilterFotossensivel(!filterFotossensivel)}>
+                  <input type="checkbox" checked={filterFotossensivel} onChange={() => {}} style={{ width: '16px', height: '16px', pointerEvents: 'none' }} />
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>Fotossensível</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setFilterFiltroAzul(!filterFiltroAzul)}>
+                  <input type="checkbox" checked={filterFiltroAzul} onChange={() => {}} style={{ width: '16px', height: '16px', pointerEvents: 'none' }} />
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>Filtro Azul</span>
+                </div>
+              </div>
+
               <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                 <button 
                   className="btn btn-secondary" 
@@ -860,7 +884,17 @@ export default function NovoOrcamento() {
                     marginBottom: '8px',
                     color: 'var(--text-secondary)',
                   }}>
-                    {group.fornecedor} - {group.nome}
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {group.nome}
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            {group.lentes.some(l => l.especificacoes?.fotossensivel) && (
+                              <span title="Fotossensível" style={{ fontSize: '10px', background: 'var(--accent-amber-bg)', color: 'var(--accent-amber)', padding: '2px 6px', borderRadius: '4px' }}>🌟 Foto</span>
+                            )}
+                            {group.lentes.some(l => l.especificacoes?.filtroAzul) && (
+                              <span title="Filtro Azul" style={{ fontSize: '10px', background: 'var(--accent-primary-bg)', color: 'var(--accent-primary-hover)', padding: '2px 6px', borderRadius: '4px' }}>🔵 Azul</span>
+                            )}
+                          </div>
+                        </div>
                     <span className={`badge ${group.tipo === 'multifocal' ? 'badge-purple' : 'badge-cyan'}`}
                       style={{ marginLeft: '8px' }}>
                       {group.tipo === 'multifocal' ? 'Multi' : 'VS'}
