@@ -82,10 +82,13 @@ export default function Orcamentos() {
     orc.itens?.forEach((item, idx) => {
       if (item.lenteName) {
         msg += `*📌 Opção ${idx + 1}:* ${item.lenteName}\n`
-        msg += `   Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n`
-        msg += `   Valor: ${formatCurrency(item.preco)}\n\n`
+        msg += `   Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n\n`
       }
     })
+
+    if (orc.armacao && orc.armacao.referencia) {
+      msg += `*👓 Armação:* ${orc.armacao.referencia}\n\n`
+    }
 
     msg += `━━━━━━━━━━━━━━━━━━\n`
     msg += `*💰 Total: ${formatCurrency(orc.total || 0)}*\n`
@@ -96,8 +99,8 @@ export default function Orcamentos() {
 
     const phone = orc.cliente?.telefone?.replace(/\D/g, '') || ''
     const url = phone
-      ? `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`
-      : `https://wa.me/?text=${encodeURIComponent(msg)}`
+      ? `https://api.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(msg)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`
 
     window.open(url, '_blank')
   }
@@ -405,7 +408,46 @@ export default function Orcamentos() {
               </div>
             ))}
 
+            {selectedOrc.armacao && (selectedOrc.armacao.referencia || selectedOrc.armacao.preco > 0) && (
+              <div style={{
+                padding: '16px',
+                background: 'rgba(255,255,255,0.02)',
+                borderRadius: 'var(--radius-sm)',
+                marginBottom: '12px',
+                border: '1px solid var(--border-color)',
+                borderLeft: '4px solid var(--accent-primary)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    👓 Armação
+                  </span>
+                  {selectedOrc.armacao.preco > 0 && (
+                    <span style={{ fontWeight: 700, color: 'var(--accent-green)' }}>
+                      {formatCurrency(selectedOrc.armacao.preco)}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                  {selectedOrc.armacao.referencia || 'Referência não informada'}
+                </div>
+              </div>
+            )}
+
             <div className="divider" />
+
+            {selectedOrc.desconto > 0 && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '14px',
+                color: 'var(--accent-red)',
+                marginBottom: '8px',
+                fontWeight: 600
+              }}>
+                <span>Desconto</span>
+                <span>-{formatCurrency(selectedOrc.desconto)}</span>
+              </div>
+            )}
 
             <div style={{
               display: 'flex',

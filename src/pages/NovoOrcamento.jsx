@@ -39,6 +39,8 @@ export default function NovoOrcamento() {
   const [ocrResult, setOcrResult] = useState(null)
   const [ocrPreview, setOcrPreview] = useState(null)
   const [parcelas, setParcelas] = useState(1)
+  const [armacao, setArmacao] = useState({ referencia: '', preco: 0 })
+  const [desconto, setDesconto] = useState(0)
   
   // Selection Filters
   const [filterIndex, setFilterIndex] = useState('')
@@ -319,7 +321,7 @@ export default function NovoOrcamento() {
     }
   }
 
-  const total = itens.reduce((sum, item) => sum + (item.preco || 0), 0)
+  const total = (itens.reduce((sum, item) => sum + (item.preco || 0), 0) + (parseFloat(armacao.preco) || 0)) - (parseFloat(desconto) || 0)
 
   const maskPhone = (value) => {
     if (!value) return ''
@@ -387,6 +389,11 @@ export default function NovoOrcamento() {
         ...item,
         preco: parseFloat(item.preco) || 0,
       })),
+      armacao: {
+        ...armacao,
+        preco: parseFloat(armacao.preco) || 0
+      },
+      desconto: parseFloat(desconto) || 0,
       total,
       observacoes,
       status,
@@ -402,6 +409,8 @@ export default function NovoOrcamento() {
       oe: { esferico: '', cilindro: '', eixo: '', adicao: '' },
     })
     setItens([{ ...EMPTY_ITEM }])
+    setArmacao({ referencia: '', preco: 0 })
+    setDesconto(0)
     setObservacoes('')
     setActiveItemIdx(0)
   }
@@ -431,10 +440,13 @@ export default function NovoOrcamento() {
     itens.forEach((item, idx) => {
       if (item.lenteName) {
         msg += `*📌 Opção ${idx + 1}:* ${item.lenteName}\n`
-        msg += `   Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n`
-        msg += `   Valor: ${formatCurrency(item.preco)}\n\n`
+        msg += `   Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n\n`
       }
     })
+
+    if (armacao.referencia) {
+      msg += `*👓 Armação:* ${armacao.referencia}\n\n`
+    }
 
     msg += `━━━━━━━━━━━━━━━━━━\n`
     msg += `*💰 Total: ${formatCurrency(total)}*\n`
@@ -452,8 +464,8 @@ export default function NovoOrcamento() {
     // Clean phone number for URL
     const phone = cliente.telefone?.replace(/\D/g, '') || ''
     const url = phone
-      ? `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`
-      : `https://wa.me/?text=${encodeURIComponent(msg)}`
+      ? `https://api.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(msg)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`
 
     window.open(url, '_blank')
   }
@@ -491,6 +503,35 @@ export default function NovoOrcamento() {
                   value={cliente.telefone}
                   onChange={handlePhoneChange}
                   maxLength={15} // (XX) XXXXX-XXXX = 15 chars
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Frame Info */}
+          <div className="card">
+            <div className="card-header">
+              <h3 className="card-title">👓 Dados da Armação (Opcional)</h3>
+            </div>
+            <div className="form-row">
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Referência / Modelo</label>
+                <input
+                  className="form-input"
+                  placeholder="Ex: Ray-Ban RB3025"
+                  value={armacao.referencia}
+                  onChange={e => setArmacao(prev => ({ ...prev, referencia: e.target.value }))}
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Preço da Armação</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={armacao.preco || ''}
+                  onChange={e => setArmacao(prev => ({ ...prev, preco: parseFloat(e.target.value) || 0 }))}
                 />
               </div>
             </div>
@@ -719,6 +760,36 @@ export default function NovoOrcamento() {
                 </span>
               </div>
             ))}
+
+            {armacao.preco > 0 && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '8px 0',
+                borderBottom: '1px solid var(--border-color)',
+                fontSize: '14px',
+              }}>
+                <span style={{ color: 'var(--text-secondary)' }}>
+                  Armação {armacao.referencia ? `(${armacao.referencia})` : ''}
+                </span>
+                <span style={{ fontWeight: 600 }}>
+                  {formatCurrency(armacao.preco)}
+                </span>
+              </div>
+            )}
+
+            <div style={{ marginTop: '16px' }}>
+              <label className="form-label" style={{ fontSize: '12px', marginBottom: '4px' }}>Desconto (R$)</label>
+              <input
+                className="form-input"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={desconto || ''}
+                onChange={e => setDesconto(parseFloat(e.target.value) || 0)}
+                style={{ height: '36px', fontSize: '14px' }}
+              />
+            </div>
 
             <div style={{
               display: 'flex',
