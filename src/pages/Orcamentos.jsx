@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { 
-  Search, Trash2, Eye, Send, CheckCircle, Clock, 
-  MessageCircle, Filter, X 
+import {
+  Search, Trash2, Eye, Send, CheckCircle, Clock,
+  MessageCircle, Filter, X, FileText, TrendingUp
 } from 'lucide-react'
 import { useToast } from '../contexts/ToastContext'
 import {
@@ -66,9 +66,9 @@ export default function Orcamentos() {
     msg += `━━━━━━━━━━━━━━━━━━\n`
     msg += `*Cliente:* ${orc.cliente?.nome}\n`
 
-    const rec = orc.receita || (orc.itens?.[0]?.olhoDireito ? { 
-      od: orc.itens[0].olhoDireito, 
-      oe: orc.itens[0].olhoEsquerdo 
+    const rec = orc.receita || (orc.itens?.[0]?.olhoDireito ? {
+      od: orc.itens[0].olhoDireito,
+      oe: orc.itens[0].olhoEsquerdo
     } : null);
 
     if (rec) {
@@ -76,16 +76,19 @@ export default function Orcamentos() {
       msg += `OD: ${rec.od?.esferico || '0.00'}/${rec.od?.cilindro || '0.00'} Eixo: ${rec.od?.eixo || '0'}° Add: ${rec.od?.adicao || '0.00'}\n`
       msg += `OE: ${rec.oe?.esferico || '0.00'}/${rec.oe?.cilindro || '0.00'} Eixo: ${rec.oe?.eixo || '0'}° Add: ${rec.oe?.adicao || '0.00'}\n`
     }
-    
+
     msg += `\n`
 
     orc.itens?.forEach((item, idx) => {
       if (item.lenteName) {
         msg += `*📌 Opção ${idx + 1}:* ${item.lenteName}\n`
-        msg += `   Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n`
-        msg += `   Valor: ${formatCurrency(item.preco)}\n\n`
+        msg += `   Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n\n`
       }
     })
+
+    if (orc.armacao && orc.armacao.referencia) {
+      msg += `*👓 Armação:* ${orc.armacao.referencia}\n\n`
+    }
 
     msg += `━━━━━━━━━━━━━━━━━━\n`
     msg += `*💰 Total: ${formatCurrency(orc.total || 0)}*\n`
@@ -96,17 +99,92 @@ export default function Orcamentos() {
 
     const phone = orc.cliente?.telefone?.replace(/\D/g, '') || ''
     const url = phone
-      ? `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`
-      : `https://wa.me/?text=${encodeURIComponent(msg)}`
+      ? `https://api.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(msg)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`
 
     window.open(url, '_blank')
   }
+
+  const totalOrcamentos = orcamentos.length
+  const valorTotal = orcamentos.reduce((sum, o) => sum + (o.total || 0), 0)
+  const orcamentosPendentes = orcamentos.filter(o => o.status === 'pendente').length
 
   return (
     <div className="animate-in">
       <div className="page-header">
         <h1>Orçamentos</h1>
         <p>{orcamentos.length} orçamento(s) registrado(s)</p>
+      </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        .stats-grid-small {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+          margin-bottom: 20px;
+        }
+        .stat-card-small {
+          padding: 12px 16px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: var(--bg-card);
+          border-radius: var(--radius-md);
+          border: 1px solid var(--border-color);
+        }
+        .stat-icon-small {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justifyContent: center;
+        }
+        .stat-info-small h3 {
+          font-size: 16px;
+          margin: 0;
+          line-height: 1.2;
+        }
+        .stat-info-small p {
+          font-size: 11px;
+          margin: 0;
+          color: var(--text-secondary);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+      `}} />
+
+      <div className="stats-grid-small">
+        <div className="stat-card-small">
+          <div className="stat-icon-small green" style={{ background: 'var(--accent-green-bg)', color: 'var(--accent-green)' }}>
+            <FileText size={18} />
+          </div>
+          <div className="stat-info-small">
+            <h3>{totalOrcamentos}</h3>
+            <p>Gerados</p>
+          </div>
+        </div>
+
+        <div className="stat-card-small">
+          <div className="stat-icon-small amber" style={{ background: 'var(--accent-amber-bg)', color: 'var(--accent-amber)' }}>
+            <TrendingUp size={18} />
+          </div>
+          <div className="stat-info-small">
+            <h3>{formatCurrency(valorTotal)}</h3>
+            <p>Valor Total</p>
+          </div>
+        </div>
+
+        <div className="stat-card-small">
+          <div className="stat-icon-small purple" style={{ background: 'var(--accent-primary-bg)', color: 'var(--accent-primary-hover)' }}>
+            <Clock size={18} />
+          </div>
+          <div className="stat-info-small">
+            <h3>{orcamentosPendentes}</h3>
+            <p>Pendentes</p>
+          </div>
+        </div>
       </div>
 
       {/* Search & Filters */}
@@ -174,13 +252,11 @@ export default function Orcamentos() {
                       {orc.cliente?.nome || 'Sem nome'}
                     </div>
                     <div style={{ color: 'var(--text-muted)', fontSize: '13px', display: 'flex', gap: '12px' }}>
-                      <span>{orc.itens?.length || 0} opção(ões)</span>
-                      <span>•</span>
+
                       <span>{new Date(orc.createdAt).toLocaleDateString('pt-BR')}</span>
                       {orc.cliente?.telefone && (
                         <>
-                          <span>•</span>
-                          <span>{orc.cliente.telefone}</span>
+
                         </>
                       )}
                     </div>
@@ -189,7 +265,7 @@ export default function Orcamentos() {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ textAlign: 'right', marginRight: '8px' }}>
-                    <div style={{ fontWeight: 700, fontSize: '18px', color: 'var(--accent-green)' }}>
+                    <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--accent-green)' }}>
                       {formatCurrency(orc.total || 0)}
                     </div>
                     <StatusBadge status={orc.status} />
@@ -252,7 +328,7 @@ export default function Orcamentos() {
                     {selectedOrc.cliente?.nome}
                   </h3>
                   <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                    {selectedOrc.cliente?.telefone || 'Sem telefone'} • 
+                    {selectedOrc.cliente?.telefone || 'Sem telefone'} •
                     {new Date(selectedOrc.createdAt).toLocaleDateString('pt-BR')}
                   </span>
                 </div>
@@ -264,9 +340,9 @@ export default function Orcamentos() {
 
             {/* Prescription Display */}
             {(() => {
-              const rec = selectedOrc.receita || (selectedOrc.itens?.[0]?.olhoDireito ? { 
-                od: selectedOrc.itens[0].olhoDireito, 
-                oe: selectedOrc.itens[0].olhoEsquerdo 
+              const rec = selectedOrc.receita || (selectedOrc.itens?.[0]?.olhoDireito ? {
+                od: selectedOrc.itens[0].olhoDireito,
+                oe: selectedOrc.itens[0].olhoEsquerdo
               } : null);
 
               if (!rec) return null;
@@ -332,7 +408,46 @@ export default function Orcamentos() {
               </div>
             ))}
 
+            {selectedOrc.armacao && (selectedOrc.armacao.referencia || selectedOrc.armacao.preco > 0) && (
+              <div style={{
+                padding: '16px',
+                background: 'rgba(255,255,255,0.02)',
+                borderRadius: 'var(--radius-sm)',
+                marginBottom: '12px',
+                border: '1px solid var(--border-color)',
+                borderLeft: '4px solid var(--accent-primary)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    👓 Armação
+                  </span>
+                  {selectedOrc.armacao.preco > 0 && (
+                    <span style={{ fontWeight: 700, color: 'var(--accent-green)' }}>
+                      {formatCurrency(selectedOrc.armacao.preco)}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                  {selectedOrc.armacao.referencia || 'Referência não informada'}
+                </div>
+              </div>
+            )}
+
             <div className="divider" />
+
+            {selectedOrc.desconto > 0 && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '14px',
+                color: 'var(--accent-red)',
+                marginBottom: '8px',
+                fontWeight: 600
+              }}>
+                <span>Desconto</span>
+                <span>-{formatCurrency(selectedOrc.desconto)}</span>
+              </div>
+            )}
 
             <div style={{
               display: 'flex',
