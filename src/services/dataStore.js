@@ -87,15 +87,16 @@ export async function deleteOrcamento(id) {
 export async function getFornecedores() {
   const snapshot = await getDocs(collection(db, COLLECTIONS.FORNECEDORES));
   const saved = snapshot.docs.map(doc => doc.data().nome);
+  const uniqueSaved = [...new Set(saved)];
   
-  if (saved.length === 0) {
+  if (uniqueSaved.length === 0) {
     const defaultFornecedores = ['Zeiss', 'Essilor', 'Hoya', 'Tokai', 'Shamir', 'Rodenstock'];
     for (const nome of defaultFornecedores) {
       await addDoc(collection(db, COLLECTIONS.FORNECEDORES), { nome });
     }
     return defaultFornecedores;
   }
-  return saved;
+  return uniqueSaved;
 }
 
 export async function addFornecedor(nome) {

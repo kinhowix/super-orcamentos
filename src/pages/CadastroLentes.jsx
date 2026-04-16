@@ -12,6 +12,7 @@ import {
   saveNiveisARFornecedor, deleteNiveisARFornecedor
 } from '../services/dataStore'
 import { extractPDFStructured } from '../services/pdfParser'
+import { extractLensesFromPDF } from '../services/ocrService'
 
 // AR levels predefinidos por marca conhecida
 const AR_PREDEFINIDOS = {
@@ -107,6 +108,10 @@ export default function CadastroLentes() {
   const [pdfFileName, setPdfFileName] = useState('')
   const [selectedRows, setSelectedRows] = useState([])
   const [pdfPage, setPdfPage] = useState(0)
+  const [pdfStartPage, setPdfStartPage] = useState(1)
+  const [pdfEndPage, setPdfEndPage] = useState(1)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiProgress, setAiProgress] = useState(0)
 
   // Lote (batch) state
   const [loteLentes, setLoteLentes] = useState([createEmptyLoteLente()])
@@ -378,6 +383,74 @@ export default function CadastroLentes() {
       toast.error('Erro ao processar o PDF: ' + err.message)
     } finally {
       setPdfLoading(false)
+    }
+  }
+
+  const handleAISmartExtract = async () => {
+    const file = fileInputRef.current?.files?.[0]
+    if (!file) {
+      toast.error('Selecione um arquivo PDF primeiro')
+      return
+    }
+
+    setAiLoading(true)
+    setAiProgress(0)
+
+    try {
+      const data = await extractLensesFromPDF(file, pdfStartPage, pdfEndPage, (p) => setAiProgress(p))
+      
+      if (!data || data.length === 0) {
+        toast.error('Nenhuma lente encontrada pela IA nestas páginas')
+        return
+      }
+
+      // Preencher o lote com os dados da IA
+      const firstLens = data[0]
+      setLoteFornecedor(firstLens.fornecedor || '')
+      setLoteTipo(firstLens.tipo || 'multifocal')
+      
+      // Tentar encontrar um nome comum para o lote ou usar o nome da primeira lente
+      const commonName = data.every(l => l.nome === firstLens.nome) ? firstLens.nome : firstLens.nome
+      setLoteNome(commonName || '')
+
+      // Mapear ARs encontrados para as colunas do lote (em ordem alfabética ou original)
+      const allARs = new Set()
+      data.forEach(l => {
+        if (l.precos) {
+          Object.keys(l.precos).forEach(ar => allARs.add(ar))
+        }
+      })
+      const arColumnsArray = Array.from(allARs)
+      setLoteARColumns(arColumnsArray)
+
+      const newLoteLentes = data.map(l => {
+        return {
+          indice: l.indice || '',
+          material: l.material || '',
+          precos: l.precos || {},
+          esferico_min: l.especificacoes?.esferico_min ?? '',
+          esferico_max: l.especificacoes?.esferico_max ?? '',
+          cilindro_max: l.especificacoes?.cilindro_max ?? '',
+          adicao_min: l.especificacoes?.adicao_min ?? '',
+          adicao_max: l.especificacoes?.adicao_max ?? '',
+          diametro: l.especificacoes?.diametro ?? '',
+          prisma: l.especificacoes?.prisma || (l.especificacoes?.prisma_valor ? 'Sim' : 'Não'),
+          useGrid: false,
+          grid: {},
+          fotossensivel: l.fotossensivel || false,
+          filtroAzul: l.filtroAzul || false,
+          rawText: `IA: ${l.nome} (${l.material})`,
+        }
+      })
+
+      setLoteLentes(newLoteLentes)
+      setActiveTab('lote')
+      toast.success(`IA processou ${data.length} lente(s) com sucesso!`)
+    } catch (err) {
+      console.error('Error in AI Extract:', err)
+      toast.error('Erro na extração por IA: ' + err.message)
+    } finally {
+      setAiLoading(false)
     }
   }
 
@@ -676,10 +749,17 @@ export default function CadastroLentes() {
           pdfFileName={pdfFileName}
           pdfPage={pdfPage}
           selectedRows={selectedRows}
+          pdfStartPage={pdfStartPage}
+          pdfEndPage={pdfEndPage}
+          aiLoading={aiLoading}
+          aiProgress={aiProgress}
           onUpload={handlePDFUpload}
           onPageChange={setPdfPage}
           onToggleRow={toggleRowSelection}
           onCopyToLote={copyRowToLote}
+          onStartPageChange={(val) => setPdfStartPage(isNaN(val) ? 1 : val)}
+          onEndPageChange={(val) => setPdfEndPage(isNaN(val) ? 1 : val)}
+          onAISmartExtract={handleAISmartExtract}
         />
       )}
 
@@ -1098,8 +1178,10 @@ function ManualForm({
 // ========== PDF IMPORT COMPONENT ==========
 function PDFImport({
   fileInputRef, pdfData, pdfLoading, pdfFileName,
-  pdfPage, selectedRows,
-  onUpload, onPageChange, onToggleRow, onCopyToLote
+  pdfPage, selectedRows, pdfStartPage, pdfEndPage,
+  aiLoading, aiProgress,
+  onUpload, onPageChange, onToggleRow, onCopyToLote,
+  onStartPageChange, onEndPageChange, onAISmartExtract
 }) {
   return (
     <div>
@@ -1129,6 +1211,63 @@ function PDFImport({
             <p>Ou arraste e solte o catálogo de lentes aqui</p>
           </>
         )}
+      </div>
+
+      {/* AI Extraction Tools */}
+      <div className="card" style={{ marginBottom: '24px', border: aiLoading ? '2px solid var(--accent-primary)' : undefined }}>
+        <div className="card-header">
+          <h3 className="card-title">✨ Importação Inteligente (Google IA)</h3>
+        </div>
+        <div style={{ padding: '0 20px 20px' }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+            Utilize Inteligência Artificial para extrair todos os dados (marca, preços e especificações) automaticamente.
+          </p>
+          
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div className="form-group" style={{ marginBottom: 0, width: '100px' }}>
+              <label className="form-label" style={{ fontSize: '11px' }}>Pág. Inicial</label>
+              <input 
+                type="number" 
+                className="form-input" 
+                min="1" 
+                value={pdfStartPage} 
+                onChange={e => onStartPageChange(parseInt(e.target.value))}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0, width: '100px' }}>
+              <label className="form-label" style={{ fontSize: '11px' }}>Pág. Final</label>
+              <input 
+                type="number" 
+                className="form-input" 
+                min="1" 
+                value={pdfEndPage} 
+                onChange={e => onEndPageChange(parseInt(e.target.value))}
+              />
+            </div>
+            
+            <button 
+              className="btn btn-primary" 
+              onClick={onAISmartExtract}
+              disabled={aiLoading || !fileInputRef.current?.files?.[0]}
+              style={{ flex: 1, minWidth: '200px' }}
+            >
+              {aiLoading ? (
+                <>
+                  <div className="loading-spinner" style={{ width: '14px', height: '14px', marginRight: '8px' }} />
+                  Processando com IA ({aiProgress}%)
+                </>
+              ) : (
+                <>✨ Iniciar Extração por IA</>
+              )}
+            </button>
+          </div>
+
+          {!fileInputRef.current?.files?.[0] && (
+            <p style={{ fontSize: '11px', color: 'var(--accent-red)', marginTop: '8px' }}>
+              * Selecione um arquivo PDF acima primeiro.
+            </p>
+          )}
+        </div>
       </div>
 
       {/* PDF Preview */}
