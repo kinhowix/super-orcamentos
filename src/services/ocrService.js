@@ -12,6 +12,61 @@ const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 /**
+ * Função utilitária para tentar novamente em caso de erro 503 (serviço ocupado)
+ */
+async function callWithRetry(fn, maxRetries = 3, delay = 2000) {
+  let lastError;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      const msg = error.message?.toLowerCase() || '';
+      // Se for 503 ou 429, esperamos e tentamos de novo
+      if (msg.includes('503') || msg.includes('429') || msg.includes('demand') || msg.includes('overloaded')) {
+        console.warn(`Gemini ocupado (tentativa ${i + 1}/${maxRetries}). Aguardando ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2; // Backoff exponencial
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw lastError;
+}
+
+/**
+ * Otimiza uma imagem (redimensiona e comprime) para reduzir o payload da API
+ */
+async function optimizeImage(file, maxWidth = 1600) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(img.src);
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth) {
+        height = (maxWidth / width) * height;
+        width = maxWidth;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      }, 'image/jpeg', 0.8);
+    };
+    img.onerror = () => resolve(file); // Se der erro na imagem, manda o original como fallback
+  });
+}
+
+/**
  * Converte um arquivo ou blob para o formato esperado pelo Gemini
  */
 async function fileToGenerativePart(file) {
@@ -42,7 +97,8 @@ export async function extractTextFromImage(image, onProgress) {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     onProgress?.(40);
-    const imagePart = await fileToGenerativePart(image);
+    const optimizedBlob = await optimizeImage(image);
+    const imagePart = await fileToGenerativePart(optimizedBlob);
 
     const prompt = `
       Você é um especialista em leitura de receitas oftalmológicas brasileiras.
@@ -70,7 +126,7 @@ export async function extractTextFromImage(image, onProgress) {
     `;
 
     onProgress?.(60);
-    const result = await model.generateContent([prompt, imagePart]);
+    const result = await callWithRetry(() => model.generateContent([prompt, imagePart]));
     const response = await result.response;
     const text = response.text();
 
@@ -167,85 +223,110 @@ export async function extractLensesFromPDF(file, startPage = 1, endPage = 1, onP
       });
     }
 
-    onProgress?.(50);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    const prompt = `
-      Você é um especialista em leitura de catálogos e tabelas de preços de lentes oftalmológicas brasileiras.
-      Analise as imagens do catálogo e extraia TODAS as lentes listadas, seguindo rigorosamente estas regras:
-
-      1. IDENTIFICAÇÃO DO PRODUTO:
-         - Nome da Lente: Procure títulos em destaque, cabeçalhos sombreados ou fontes maiores (Ex: "ZEISS GT2", "ZEISS Progressive Light 2 D").
-         - Fornecedor: Identifique a marca (ex: Zeiss, Essilor, Hoya).
-         - Tipo: Classifique como 'multifocal' ou 'visao_simples'.
-
-      2. MATERIAL E ÍNDICE:
-         - Mapeamento Obrigatório:
-           - "Poli" ou "Policarbonato" -> Índice: "1.59", Material: "Poli"
-           - "1.5" ou "CR39" -> Índice: "1.50", Material: "Resina"
-           - "1.6" -> Índice: "1.60", Material: "Resina"
-           - "1.67" -> Índice: "1.67", Material: "Resina"
-           - "1.74" -> Índice: "1.74", Material: "Resina"
-         - Se o índice for detectado mas o material estiver implícito, use "Resina" como padrão para índices que não sejam Poli.
-
-      3. TRATAMENTOS E PREÇOS:
-         - Identifique os cabeçalhos das colunas de preços dentro de "TRATAMENTOS" ou abaixo do modelo.
-         - Use os NOMES EXATOS encontrados na imagem (ex: "DURAVISION GOLD UV", "DURAVISION PLATINUM UV", "SEM AR").
-         - Use esses nomes como chaves no objeto "precos".
-         - Converta preços para número (ex: "2.639,00" -> 2639.00).
-
-      4. DISPONIBILIDADE E GRAUS (DISPONIBILIDADE BRASIL):
-         - ESFÉRICO: Se houver um intervalo (ex: "-9.00 a +6.00"), separe em "esferico_min" e "esferico_max".
-         - CILÍNDRICO: Extraia o valor máximo (ex: "-4.00").
-         - ADIÇÃO: Se houver intervalo (ex: "1.00 a 3.50"), separe em "adicao_min" e "adicao_max".
-         - DIÂMETRO (Ø): Extraia o número inteiro (ex: 75).
-         - PRISMA (Δ): Se houver valor numérico (ex: 4.00), coloque em "prisma_valor" e defina "prisma" como "Sim".
-
-      5. EXTRAS:
-         - Marque "fotossensivel": true se encontrar marcas como PhotoFusion, Transitions ou se houver menção a "sensível à luz".
-         - Marque "filtroAzul": true se encontrar marcas como Blueguard, Blue UV Capture ou Menção a proteção de luz azul.
-
-      Retorne APENAS um JSON Array seguindo exatamente este formato:
-      [{
-        "fornecedor": "Zeiss",
-        "tipo": "multifocal",
-        "nome": "ZEISS GT2 FreeForm BlueGuard",
-        "indice": "1.59",
-        "material": "Poli",
-        "precos": {
-          "DURAVISION GOLD UV": 2349.00,
-          "DURAVISION PLATINUM UV": 2209.00,
-          "SEM AR": 1059.00
-        },
-        "especificacoes": {
-          "esferico_min": -10.00,
-          "esferico_max": 6.00,
-          "cilindro_max": -6.00,
-          "adicao_min": 1.00,
-          "adicao_max": 3.00,
-          "diametro": 75,
-          "prisma": "Sim",
-          "prisma_valor": 3.00
-        },
-        "fotossensivel": false,
-        "filtroAzul": true
-      }]
-    `;
-
-    onProgress?.(70);
-    const result = await model.generateContent([prompt, ...pagesToProcess]);
-    const response = await result.response;
-    const text = response.text();
-
-    onProgress?.(95);
-    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    const data = JSON.parse(jsonStr);
-
-    onProgress?.(100);
-    return data;
+    return await processLensesWithIA(pagesToProcess, onProgress);
   } catch (error) {
     console.error("Erro no Gemini PDF Extraction:", error);
     throw error;
   }
+}
+
+/**
+ * Extrai dados de lentes de uma lista de imagens (Files)
+ * @param {File[]} files - Lista de arquivos de imagem
+ * @param {Function} onProgress - Callback de progresso
+ */
+export async function extractLensesFromImages(files, onProgress) {
+  try {
+    onProgress?.(10);
+    const imagesToProcess = [];
+    
+    for (const file of files) {
+      const optimizedBlob = await optimizeImage(file);
+      const part = await fileToGenerativePart(optimizedBlob);
+      imagesToProcess.push(part);
+    }
+
+    return await processLensesWithIA(imagesToProcess, onProgress);
+  } catch (error) {
+    console.error("Erro no Gemini Image Extraction:", error);
+    throw error;
+  }
+}
+
+/**
+ * Lógica central de processamento com Gemini para extração de tabelas de lentes
+ */
+async function processLensesWithIA(generativeParts, onProgress) {
+  onProgress?.(50);
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+  const prompt = `
+    Você é um especialista em leitura de catálogos e tabelas de preços de lentes oftalmológicas brasileiras.
+    Analise as imagens e extraia TODAS as lentes listadas na tabela, seguindo rigorosamente estas regras:
+
+    1. IDENTIFICAÇÃO DO PRODUTO:
+       - Nome da Lente: Extraia o nome completo do modelo (Ex: "ZEISS Progressive Light 2 D Blueguard").
+       - Fornecedor: Identifique a marca (ex: Zeiss, Essilor, Hoya).
+       - Tipo: Classifique como 'multifocal' ou 'visao_simples'.
+
+    2. MATERIAL E ÍNDICE:
+       - "Poli" ou "Policarbonato" -> Índice: "1.59", Material: "Poli"
+       - "1.5" ou "CR39" -> Índice: "1.50", Material: "Resina"
+       - "1.6" -> Índice: "1.60", Material: "Resina"
+       - "1.67" -> Índice: "1.67", Material: "Resina"
+       - "1.74" -> Índice: "1.74", Material: "Resina"
+
+    3. TRATAMENTOS E PREÇOS:
+       - Identifique os tratamentos nos cabeçalhos das colunas (ex: "DURAVISION GOLD UV", "PLATINUM UV", "SEM AR").
+       - Use os NOMES EXATOS das colunas como chaves no objeto "precos".
+       - Converta preços para número (ex: "2.639,00" -> 2639.00).
+
+    4. DISPONIBILIDADE E GRAUS:
+       - ESFÉRICO: Se houver intervalo (ex: "-9.00 a +6.00"), extraia esferico_min: -9.00 e esferico_max: 6.00.
+       - CILÍNDRICO: Extraia o valor numérico (ex: "-4.00").
+       - ADIÇÃO: Se houver intervalo (ex: "1.00 a 3.50"), extraia adicao_min: 1.00 e adicao_max: 3.50.
+       - DIÂMETRO (Ø): Extraia o número (ex: 75).
+
+    5. REGRAS ESPECÍFICAS DE ATRIBUTOS:
+       - Se o nome contiver "PhotoFusion", marque "fotossensivel": true E "filtroAzul": true.
+       - Se o nome contiver "Blueguard", marque "filtroAzul": true.
+       - Se o nome contiver "Transitions", marque "fotossensivel": true.
+
+    Retorne APENAS um JSON Array seguindo exatamente este formato:
+    [{
+      "fornecedor": "Zeiss",
+      "tipo": "multifocal",
+      "nome": "ZEISS Progressive Light 2 D Blueguard",
+      "indice": "1.59",
+      "material": "Poli",
+      "precos": {
+        "DURAVISION GOLD UV": 2639.00,
+        "DURAVISION PLATINUM UV": 2499.00,
+        "SEM AR": 1349.00
+      },
+      "especificacoes": {
+        "esferico_min": -9.00,
+        "esferico_max": 6.00,
+        "cilindro_max": -4.00,
+        "adicao_min": 1.00,
+        "adicao_max": 3.50,
+        "diametro": 75
+      },
+      "fotossensivel": false,
+      "filtroAzul": true
+    }]
+  `;
+
+  onProgress?.(70);
+  const result = await callWithRetry(() => model.generateContent([prompt, ...generativeParts]));
+  const response = await result.response;
+  const text = response.text();
+
+  onProgress?.(95);
+  const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+  const data = JSON.parse(jsonStr);
+
+  onProgress?.(100);
+  return data;
 }
 

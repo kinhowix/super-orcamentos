@@ -12,7 +12,7 @@ import {
   saveNiveisARFornecedor, deleteNiveisARFornecedor
 } from '../services/dataStore'
 import { extractPDFStructured } from '../services/pdfParser'
-import { extractLensesFromPDF } from '../services/ocrService'
+import { extractLensesFromPDF, extractLensesFromImages } from '../services/ocrService'
 
 // AR levels predefinidos por marca conhecida
 const AR_PREDEFINIDOS = {
@@ -127,6 +127,13 @@ export default function CadastroLentes() {
   const [novoAREdit, setNovoAREdit] = useState('')
   const [novoAREditLabel, setNovoAREditLabel] = useState('')
   const [gridRowIndex, setGridRowIndex] = useState(null)
+  
+  // IA Vision state
+  const [isIAModalOpen, setIsIAModalOpen] = useState(false)
+  const [iaLenses, setIaLenses] = useState([])
+  const [iaProcessing, setIaProcessing] = useState(false)
+  const [iaProgress, setIaProgress] = useState(0)
+  const iaFileInputRef = useRef(null)
 
   useEffect(() => {
     async function loadConfig() {
@@ -296,7 +303,7 @@ export default function CadastroLentes() {
     const filterPrecos = (precos) => {
       return Object.fromEntries(
         Object.entries(precos)
-          .filter(([k, v]) => lente.niveisAR.includes(k) && v && parseFloat(v) > 0)
+          .filter(([k, v]) => (lente.niveisAR || []).includes(k) && v && parseFloat(v) > 0)
           .map(([k, v]) => [k, parseFloat(v)])
       )
     }
@@ -357,6 +364,104 @@ export default function CadastroLentes() {
       toast.success(`${lentesParaSalvar.length} lente(s) cadastrada(s) com sucesso!`)
       setLente({ ...EMPTY_LENTE })
     }
+  }
+
+  // ========== IA Vision Handlers ==========
+  const handleIAImageUpload = async (e) => {
+    const files = Array.from(e.target.files)
+    if (files.length === 0) return
+
+    setIaProcessing(true)
+    setIaProgress(0)
+
+    try {
+      const data = await extractLensesFromImages(files, (p) => setIaProgress(p))
+      if (!data || data.length === 0) {
+        toast.error('Nenhuma lente encontrada na imagem')
+        return
+      }
+
+      setIaLenses(data.map((l, i) => ({ ...l, tempId: i })))
+      setIsIAModalOpen(true)
+      toast.success('Extração concluída! Revise os dados encontrados.')
+    } catch (err) {
+      console.error('Erro na extração IA:', err)
+      toast.error('Erro ao processar imagem: ' + err.message)
+    } finally {
+      setIaProcessing(false)
+    }
+  }
+
+  const handleConfirmIA = async () => {
+    // 1. Identificar novos tratamentos (AR) e salvá-los
+    const fornecedoresNovosAR = {} // { 'Zeiss': [ 'novo_ar_1', ... ] }
+    
+    iaLenses.forEach(l => {
+      const fornecedor = l.fornecedor
+      const ars = Object.keys(l.precos || {})
+      if (!fornecedoresNovosAR[fornecedor]) fornecedoresNovosAR[fornecedor] = new Set()
+      ars.forEach(ar => fornecedoresNovosAR[fornecedor].add(ar))
+    })
+
+    // Atualizar configurações de AR para cada fornecedor envolvido
+    for (const [fornecedor, novosARSet] of Object.entries(fornecedoresNovosAR)) {
+      const existingConfig = await getNiveisARByFornecedor(fornecedor)
+      const currentNiveis = existingConfig ? existingConfig.niveis : (AR_PREDEFINIDOS[fornecedor]?.map(n => n.key) || [])
+      
+      const updatedNiveis = [...new Set([...currentNiveis, ...novosARSet])]
+      if (updatedNiveis.length > currentNiveis.length) {
+        await saveNiveisARFornecedor(fornecedor, updatedNiveis)
+      }
+    }
+
+    // 2. Preparar as lentes para o Cadastro em Lote (para edição final se quiserem)
+    // Ou salvar direto? O usuário disse: "pode aparecer uma pagina com os dados encontrados e um botão para confirmar antes de finalizar"
+    // Vou mandar para o LoteForm para que ele possa dar a última conferida se quiser.
+    
+    if (iaLenses.length > 0) {
+      const firstLens = iaLenses[0]
+      setLoteFornecedor(firstLens.fornecedor)
+      setLoteTipo(firstLens.tipo)
+      setLoteNome(firstLens.nome)
+      
+      const allARs = new Set()
+      iaLenses.forEach(l => Object.keys(l.precos || {}).forEach(ar => allARs.add(ar)))
+      setLoteARColumns(Array.from(allARs))
+
+      const newLoteLentes = iaLenses.map(l => ({
+        indice: l.indice,
+        material: l.material,
+        precos: l.precos,
+        esferico_min: l.especificacoes?.esferico_min ?? '',
+        esferico_max: l.especificacoes?.esferico_max ?? '',
+        cilindro_max: l.especificacoes?.cilindro_max ?? '',
+        adicao_min: l.especificacoes?.adicao_min ?? '',
+        adicao_max: l.especificacoes?.adicao_max ?? '',
+        diametro: l.especificacoes?.diametro ?? '',
+        prisma: l.especificacoes?.prisma || 'Não',
+        useGrid: false,
+        grid: {},
+        fotossensivel: l.fotossensivel,
+        filtroAzul: l.filtroAzul,
+        rawText: `IA: ${l.nome}`,
+      }))
+
+      setLoteLentes(newLoteLentes)
+      setActiveTab('lote')
+      setIsIAModalOpen(false)
+      toast.success('Lentes carregadas na tabela de lote para conferência final.')
+    }
+  }
+
+  const handleIALensChange = (tempId, field, value) => {
+    setIaLenses(prev => prev.map(l => l.tempId === tempId ? { ...l, [field]: value } : l))
+  }
+
+  const handleIASpecChange = (tempId, field, value) => {
+    setIaLenses(prev => prev.map(l => l.tempId === tempId ? { 
+      ...l, 
+      especificacoes: { ...l.especificacoes, [field]: value } 
+    } : l))
   }
 
   // ========== PDF Handlers ==========
@@ -696,6 +801,12 @@ export default function CadastroLentes() {
           📄 Importar PDF
         </button>
         <button
+          className={`tab ${activeTab === 'ia_vision' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ia_vision')}
+        >
+          ✨ IA Vision (Fotos)
+        </button>
+        <button
           className={`tab ${activeTab === 'lote' ? 'active' : ''}`}
           onClick={() => setActiveTab('lote')}
         >
@@ -760,6 +871,28 @@ export default function CadastroLentes() {
           onStartPageChange={(val) => setPdfStartPage(isNaN(val) ? 1 : val)}
           onEndPageChange={(val) => setPdfEndPage(isNaN(val) ? 1 : val)}
           onAISmartExtract={handleAISmartExtract}
+        />
+      )}
+
+      {/* IA Vision Tab */}
+      {activeTab === 'ia_vision' && (
+        <IAVisionTab
+          iaFileInputRef={iaFileInputRef}
+          iaProcessing={iaProcessing}
+          iaProgress={iaProgress}
+          onUpload={handleIAImageUpload}
+        />
+      )}
+
+      {/* IA Confirmation Modal */}
+      {isIAModalOpen && (
+        <IAConfirmationModal
+          lenses={iaLenses}
+          onClose={() => setIsIAModalOpen(false)}
+          onConfirm={handleConfirmIA}
+          onChange={handleIALensChange}
+          onSpecChange={handleIASpecChange}
+          getARLabel={getARLabel}
         />
       )}
 
@@ -2212,4 +2345,207 @@ function findIndexValue(cells) {
     if (match) return match[1].replace(',', '.')
   }
   return ''
+}
+// ========== IA VISION TAB COMPONENT ==========
+function IAVisionTab({ iaFileInputRef, iaProcessing, iaProgress, onUpload }) {
+  return (
+    <div className="animate-in">
+      <div 
+        className={`upload-zone ${iaProcessing ? 'active' : ''}`}
+        onClick={() => !iaProcessing && iaFileInputRef.current?.click()}
+        style={{ minHeight: '300px', cursor: iaProcessing ? 'wait' : 'pointer' }}
+      >
+        <input
+          ref={iaFileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={onUpload}
+          style={{ display: 'none' }}
+        />
+        
+        {iaProcessing ? (
+          <div style={{ textAlign: 'center' }}>
+            <div className="loading-spinner" style={{ margin: '0 auto 24px', width: '50px', height: '50px' }} />
+            <h2 style={{ marginBottom: '8px' }}>🤖 IA está analisando sua imagem...</h2>
+            <p style={{ color: 'var(--text-muted)' }}>Extraindo preços, índices e especificações técnicas.</p>
+            <div style={{ 
+              width: '300px', 
+              height: '8px', 
+              background: 'var(--border-color)', 
+              borderRadius: '4px', 
+              margin: '24px auto 0',
+              overflow: 'hidden'
+            }}>
+              <div style={{ 
+                width: `${iaProgress}%`, 
+                height: '100%', 
+                background: 'var(--accent-primary)', 
+                transition: 'width 0.3s ease' 
+              }} />
+            </div>
+            <p style={{ marginTop: '8px', fontSize: '12px', fontWeight: 'bold', color: 'var(--accent-primary)' }}>
+              {iaProgress}% concluído
+            </p>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '64px', marginBottom: '16px' }}>✨</div>
+            <h2 style={{ marginBottom: '8px' }}>Importar Catálogo via IA</h2>
+            <p style={{ color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto' }}>
+              Tire uma foto ou faça um print da tabela de preços e especificações. 
+              Nossa IA vai identificar tudo automaticamente para você.
+            </p>
+            <button className="btn btn-primary" style={{ marginTop: '24px' }}>
+              Selecionar Imagens do Catálogo
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="card" style={{ marginTop: '24px', background: 'var(--accent-primary-bg)', borderColor: 'rgba(99, 102, 241, 0.2)' }}>
+        <div style={{ padding: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+          <AlertCircle size={20} color="var(--accent-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
+          <div>
+            <h4 style={{ color: 'var(--accent-primary-hover)', marginBottom: '4px' }}>Dica para melhores resultados:</h4>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+              Tente enquadrar bem a tabela e garantir que o texto esteja legível. 
+              A IA consegue ler tabelas complexas com múltiplos tratamentos e índices de refração.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ========== IA CONFIRMATION MODAL COMPONENT ==========
+function IAConfirmationModal({ lenses, onClose, onConfirm, onChange, onSpecChange, getARLabel }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal modal-lg" onClick={e => e.stopPropagation()} style={{ width: '95%', maxWidth: '1200px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ fontSize: '24px' }}>🤖</div>
+            <div>
+              <h2 style={{ marginBottom: '2px' }}>Confirmar Dados Extraídos</h2>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '400' }}>
+                Revise os dados que a IA encontrou. Você pode editar qualquer campo antes de confirmar.
+              </p>
+            </div>
+          </div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+
+        <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+          <div className="table-container">
+            <table className="table table-sm">
+              <thead>
+                <tr>
+                  <th>Lente / Produto</th>
+                  <th style={{ width: '80px' }}>Índice</th>
+                  <th>Preços por Antirreflexo</th>
+                  <th style={{ width: '180px' }}>Especificações (Graus)</th>
+                  <th style={{ width: '100px' }}>Extras</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lenses.map((l) => (
+                  <tr key={l.tempId}>
+                    <td style={{ verticalAlign: 'top' }}>
+                      <div className="form-group" style={{ marginBottom: '8px' }}>
+                        <input 
+                          className="form-input" 
+                          value={l.nome} 
+                          onChange={e => onChange(l.tempId, 'nome', e.target.value)}
+                          style={{ fontWeight: '600', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <span className="badge badge-purple" style={{ fontSize: '10px' }}>{l.fornecedor}</span>
+                        <span className="badge badge-secondary" style={{ fontSize: '10px' }}>{l.tipo}</span>
+                      </div>
+                    </td>
+                    <td style={{ verticalAlign: 'top' }}>
+                      <input 
+                        className="form-input" 
+                        value={l.indice} 
+                        onChange={e => onChange(l.tempId, 'indice', e.target.value)}
+                        style={{ textAlign: 'center' }}
+                      />
+                      <input 
+                        className="form-input" 
+                        value={l.material} 
+                        onChange={e => onChange(l.tempId, 'material', e.target.value)}
+                        placeholder="Material"
+                        style={{ marginTop: '4px', fontSize: '11px' }}
+                      />
+                    </td>
+                    <td style={{ verticalAlign: 'top' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        {Object.entries(l.precos || {}).map(([ar, price]) => (
+                          <div key={ar} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{getARLabel(ar)}</label>
+                            <input 
+                              className="form-input" 
+                              type="number"
+                              value={price} 
+                              onChange={e => {
+                                const newPrecos = { ...l.precos, [ar]: parseFloat(e.target.value) }
+                                onChange(l.tempId, 'precos', newPrecos)
+                              }}
+                              style={{ height: '32px', fontSize: '12px' }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td style={{ verticalAlign: 'top' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                        <div className="form-group" style={{ marginBottom: '4px' }}>
+                          <label style={{ fontSize: '9px' }}>Esf. Mín</label>
+                          <input className="form-input form-input-sm" value={l.especificacoes?.esferico_min} onChange={e => onSpecChange(l.tempId, 'esferico_min', e.target.value)} />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: '4px' }}>
+                          <label style={{ fontSize: '9px' }}>Esf. Máx</label>
+                          <input className="form-input form-input-sm" value={l.especificacoes?.esferico_max} onChange={e => onSpecChange(l.tempId, 'esferico_max', e.target.value)} />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: '4px' }}>
+                          <label style={{ fontSize: '9px' }}>Cil. Máx</label>
+                          <input className="form-input form-input-sm" value={l.especificacoes?.cilindro_max} onChange={e => onSpecChange(l.tempId, 'cilindro_max', e.target.value)} />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: '4px' }}>
+                          <label style={{ fontSize: '9px' }}>Ø</label>
+                          <input className="form-input form-input-sm" value={l.especificacoes?.diametro} onChange={e => onSpecChange(l.tempId, 'diametro', e.target.value)} />
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ verticalAlign: 'top' }}>
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '4px' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={l.fotossensivel} onChange={e => onChange(l.tempId, 'fotossensivel', e.target.checked)} />
+                            Fotos.
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={l.filtroAzul} onChange={e => onChange(l.tempId, 'filtroAzul', e.target.checked)} />
+                            F. Azul
+                          </label>
+                       </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', padding: '16px 20px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary" onClick={onConfirm} style={{ padding: '0 32px' }}>
+            <Check size={18} style={{ marginRight: '8px' }} /> Confirmar e Importar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
