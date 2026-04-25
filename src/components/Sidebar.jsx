@@ -6,6 +6,7 @@ import {
   Glasses,
   FileText,
   List,
+  Calculator,
   ChevronLeft,
   ChevronRight,
   X
@@ -23,6 +24,7 @@ const navItems = [
     items: [
       { path: '/cadastro-lentes', icon: PlusCircle, label: 'Cadastrar Lentes' },
       { path: '/catalogo', icon: Glasses, label: 'Catálogo' },
+      { path: '/calculadora-bordas', icon: Calculator, label: 'Calculadora de Bordas' },
     ]
   },
   {
