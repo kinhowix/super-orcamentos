@@ -508,35 +508,6 @@ export default function NovoOrcamento() {
             </div>
           </div>
 
-          {/* Frame Info */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">👓 Dados da Armação (Opcional)</h3>
-            </div>
-            <div className="form-row">
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Referência / Modelo</label>
-                <input
-                  className="form-input"
-                  placeholder="Ex: Ray-Ban RB3025"
-                  value={armacao.referencia}
-                  onChange={e => setArmacao(prev => ({ ...prev, referencia: e.target.value }))}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Preço da Armação</label>
-                <input
-                  className="form-input"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={armacao.preco || ''}
-                  onChange={e => setArmacao(prev => ({ ...prev, preco: parseFloat(e.target.value) || 0 }))}
-                />
-              </div>
-            </div>
-          </div>
-
           {/* Prescription */}
           <div className="card">
             <div className="card-header">
@@ -737,6 +708,35 @@ export default function NovoOrcamento() {
           <button className="btn btn-secondary" onClick={addItem} style={{ alignSelf: 'flex-start' }}>
             <Plus size={16} /> Adicionar Opção
           </button>
+
+          {/* Frame Info */}
+          <div className="card">
+            <div className="card-header">
+              <h3 className="card-title">👓 Dados da Armação (Opcional)</h3>
+            </div>
+            <div className="form-row">
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Referência / Modelo</label>
+                <input
+                  className="form-input"
+                  placeholder="Ex: Ray-Ban RB3025"
+                  value={armacao.referencia}
+                  onChange={e => setArmacao(prev => ({ ...prev, referencia: e.target.value }))}
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Preço da Armação</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={armacao.preco || ''}
+                  onChange={e => setArmacao(prev => ({ ...prev, preco: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Summary Sidebar */}
