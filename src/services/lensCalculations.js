@@ -52,6 +52,7 @@ export function calculateLensThickness(params) {
     bridge, // Ponte (mm)
     dnp, // DNP (mm)
     ed, // Maior diagonal (mm)
+    selectedEye = 'OD',
   } = params;
 
   // 1. Calcular descentralização
@@ -60,7 +61,6 @@ export function calculateLensThickness(params) {
   const decentration = Math.abs(frameCenter - dnp);
 
   // 2. Diâmetro efetivo necessário considerando descentralização
-  // O diâmetro mínimo da lente bruta deve ser ED + (2 * descentralização)
   const effectiveDiameter = ed + 2 * decentration;
   const semiDiameter = effectiveDiameter / 2;
 
@@ -76,51 +76,63 @@ export function calculateLensThickness(params) {
   // 4. Potências das superfícies
   const f1 = baseCurve; // Frontal
   
-  // Espessuras em 8 pontos (0, 45, 90, 135, 180, 225, 270, 315 graus)
-  const points = [];
-  let maxThickness = 0;
-  let minThickness = 100;
-
   // Espessura Central (CT)
-  // Para lentes negativas, CT é o mínimo (geralmente 1.0 a 2.0mm)
-  // Para lentes positivas, ET é o mínimo, CT é calculado
   let ct = 2.0; 
   if (se > 0) {
-    // Estimativa para positiva: garante borda mínima de 1.0mm no ponto mais fino
     const maxPower = Math.max(
       Math.abs(getPowerAtMeridian(sphere, cylinder, axis, 0)),
       Math.abs(getPowerAtMeridian(sphere, cylinder, axis, 90))
     );
-    const s1 = calculateSagitta(f1, index, semiDiameter);
-    const s2 = calculateSagitta(f1 - maxPower, index, semiDiameter);
+    const s1 = Math.abs(calculateSagitta(f1, index, semiDiameter));
+    const s2 = Math.abs(calculateSagitta(f1 - maxPower, index, semiDiameter));
     ct = 1.0 + Math.abs(s2 - s1);
   } else {
-    // Para negativas, CT padrão
     ct = (index >= 1.59) ? 1.2 : 1.8; 
   }
 
-  for (let angle = 0; angle < 360; angle += 45) {
+  const points = [];
+  let maxThickness = 0;
+  let minThickness = 100;
+
+  // Calculamos em intervalos menores para encontrar o máximo real
+  for (let angle = 0; angle < 360; angle += 15) {
     const power = getPowerAtMeridian(sphere, cylinder, axis, angle);
-    const f2 = f1 - power; // Simplificação: F = F1 + F2
+    const f2 = f1 - power;
 
-    const s1 = calculateSagitta(f1, index, semiDiameter);
-    const s2 = calculateSagitta(f2, index, semiDiameter);
+    const s1 = Math.abs(calculateSagitta(f1, index, semiDiameter));
+    const s2 = Math.abs(calculateSagitta(f2, index, semiDiameter));
 
-    // Espessura de borda = CT + s2 - s1
-    const et = ct + s2 - s1;
+    // Espessura de borda = CT + s_back - s_front (para lentes positivas s1 > s2, para negativas s2 > s1)
+    const et = ct + (s2 - s1);
     
     points.push({ angle, thickness: et });
     maxThickness = Math.max(maxThickness, et);
     minThickness = Math.min(minThickness, et);
   }
 
+  // Extrair pontos cardeais
+  const getThicknessAt = (ang) => {
+    const p = points.find(p => p.angle === ang) || points[0];
+    return p.thickness;
+  };
+
+  const cardinals = {
+    superior: getThicknessAt(90),
+    inferior: getThicknessAt(270),
+    nasal: selectedEye === 'OD' ? getThicknessAt(180) : getThicknessAt(0),
+    temporal: selectedEye === 'OD' ? getThicknessAt(0) : getThicknessAt(180),
+  };
+
   return {
     ct,
     maxThickness,
     minThickness,
     points,
+    cardinals,
     baseCurve,
     decentration,
-    effectiveDiameter
+    effectiveDiameter,
+    f1,
+    se
   };
 }

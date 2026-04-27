@@ -35,6 +35,8 @@ export default function CalculadoraBordas() {
   const [materialIndex, setMaterialIndex] = useState(0);
   const [selectedEye, setSelectedEye] = useState('OD');
 
+  const [viewAngle, setViewAngle] = useState(0);
+
   const activeRx = selectedEye === 'OD' ? od : oe;
   const material = MATERIALS[materialIndex];
 
@@ -43,9 +45,10 @@ export default function CalculadoraBordas() {
     return calculateLensThickness({
       ...activeRx,
       ...frame,
-      index: material.index
+      index: material.index,
+      selectedEye
     });
-  }, [activeRx, frame, material]);
+  }, [activeRx, frame, material, selectedEye]);
 
   // Handler para inputs de RX
   const handleRxChange = (eye, field, value) => {
@@ -207,27 +210,40 @@ export default function CalculadoraBordas() {
               <div className="badge badge-cyan">Representação Aproximada</div>
             </div>
 
-            <div className="flex-1 flex flex-col justify-center items-center py-8 bg-black/20 rounded-xl border border-white/5 relative overflow-hidden">
+            <div className="flex-1 flex flex-col justify-center items-center py-4 bg-black/20 rounded-xl border border-white/5 relative overflow-hidden px-4">
               {/* SVG de Perfil (Topo) */}
-              <div className="w-full max-w-[500px] mb-12">
-                <h4 className="text-center text-xs font-bold text-text-muted uppercase tracking-widest mb-6">Vista Superior (Perfil da Lente)</h4>
+              <div className="w-full max-w-[500px] mb-8">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Vista de Perfil (Meridiano {viewAngle}°)</h4>
+                  <div className="flex items-center gap-3 bg-bg-secondary px-3 py-1.5 rounded-full border border-white/10">
+                    <span className="text-[10px] text-text-muted font-mono">0°</span>
+                    <input 
+                      type="range" min="0" max="180" step="15" 
+                      className="w-24 accent-accent-primary h-1 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                      value={viewAngle}
+                      onChange={(e) => setViewAngle(parseInt(e.target.value))}
+                    />
+                    <span className="text-[10px] text-text-muted font-mono">180°</span>
+                  </div>
+                </div>
                 <LensProfileSVG 
                   results={results} 
                   material={material} 
-                  frameType={frame.type}
+                  viewAngle={viewAngle}
+                  activeRx={activeRx}
                 />
               </div>
 
-              {/* SVG Frontal */}
-              <div className="w-full max-w-[300px]">
-                <h4 className="text-center text-xs font-bold text-text-muted uppercase tracking-widest mb-4">Vista Frontal (Espessuras de Borda)</h4>
-                <FrontViewSVG results={results} frame={frame} />
+              {/* SVG Frontal Premium */}
+              <div className="w-full">
+                <h4 className="text-center text-[10px] font-bold text-text-muted uppercase tracking-widest mb-6">Vista Frontal (Espessuras Cardeais)</h4>
+                <FrameOverviewSVG results={results} frame={frame} selectedEye={selectedEye} />
               </div>
 
               {/* Legenda de Escala Real */}
               <div className="absolute bottom-4 right-4 flex items-center gap-2 text-[10px] text-text-muted">
                 <div className="w-10 h-[1px] bg-text-muted"></div>
-                <span>10mm (Escala Aproximada)</span>
+                <span>Simulação Visual</span>
               </div>
             </div>
 
@@ -263,121 +279,198 @@ export default function CalculadoraBordas() {
   );
 }
 
-// Subcomponente SVG para o Perfil
-function LensProfileSVG({ results, material, frameType }) {
-  const scale = 5; // Pixels por mm para visualização
-  const width = 400;
-  const height = 150;
-  const centerX = width / 2;
-  const centerY = height / 2;
+// Subcomponente SVG para o Perfil (Fidelidade Óptica)
+function LensProfileSVG({ results, material, viewAngle, activeRx }) {
+  const scale = 4; 
+  const width = 450;
+  const height = 180;
+  const cx = width / 2;
+  const cy = height / 2;
 
-  const ct = results.ct * scale;
-  const etMax = results.maxThickness * scale;
-  const etMin = results.minThickness * scale;
-  const lensDiameter = 70 * scale; // Diâmetro fixo para o blank
-  const semiDiameter = lensDiameter / 2;
+  // Calculamos a espessura no ângulo específico
+  const getPowerAtMeridian = (s, c, a, target) => {
+    const thetaRad = ((target - a) * Math.PI) / 180;
+    return s + c * Math.pow(Math.sin(thetaRad), 2);
+  };
 
-  // Curvaturas (simuladas visualmente)
+  const calculateSagitta = (F, n, y) => {
+    if (F === 0) return 0;
+    const R = ((n - 1) * 1000) / F;
+    const absR = Math.abs(R);
+    if (y >= absR) return absR;
+    return absR - Math.sqrt(Math.pow(absR, 2) - Math.pow(y, 2));
+  };
+
+  const power = getPowerAtMeridian(activeRx.sphere, activeRx.cylinder, activeRx.axis, viewAngle);
   const f1 = results.baseCurve;
-  const f2 = f1 - (results.maxThickness > results.ct ? -3 : 3); // Simplificação visual
+  const f2 = f1 - power;
 
-  // Pontos da lente
-  const topEdge = centerY - etMax / 2;
-  const bottomEdge = centerY + etMax / 2;
-  const centerPoint = centerY;
-
-  // Path da superfície frontal (Convexa)
-  const r1 = 200; // Raio visual
-  const s1 = 15; // Sagita visual
-  const frontPath = `M ${centerX - semiDiameter} ${topEdge} Q ${centerX} ${topEdge - s1}, ${centerX + semiDiameter} ${topEdge}`;
+  const lensWidth = 70; // mm
+  const semiD = lensWidth / 2;
   
-  // Path da superfície traseira (Côncava/Convexa dependendo do grau)
-  const isNegative = results.maxThickness > results.ct;
-  const s2 = isNegative ? 40 : -10;
-  const backPath = `M ${centerX + semiDiameter} ${bottomEdge} Q ${centerX} ${bottomEdge - s2}, ${centerX - semiDiameter} ${bottomEdge}`;
+  const ct = results.ct * scale;
+  const s1 = calculateSagitta(f1, material.index, semiD) * scale;
+  const s2 = calculateSagitta(f2, material.index, semiD) * scale;
+
+  // Pontos do perfil
+  // Frente: (x, s1)
+  // Trás: (x, ct + s2)
+  const isNeg = results.se < 0;
+
+  // Path da Frente (Sempre convexa/plana para o observador externo)
+  const frontPath = `M ${cx - semiD * scale} ${cy - s1} Q ${cx} ${cy}, ${cx + semiD * scale} ${cy - s1}`;
+  
+  // Path de Trás
+  const backPath = `M ${cx + semiD * scale} ${cy + ct - s2} Q ${cx} ${cy + ct}, ${cx - semiD * scale} ${cy + ct - s2}`;
 
   return (
     <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} className="drop-shadow-2xl">
       <defs>
-        <linearGradient id="lensGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.2)" />
-          <stop offset="50%" stopColor="rgba(255,255,255,0.05)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0.2)" />
+        <linearGradient id="lensProfileGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="rgba(100, 210, 255, 0.3)" />
+          <stop offset="50%" stopColor="rgba(100, 210, 255, 0.1)" />
+          <stop offset="100%" stopColor="rgba(100, 210, 255, 0.3)" />
         </linearGradient>
       </defs>
       
       {/* Corpo da Lente */}
       <path 
-        d={`${frontPath} L ${centerX + semiDiameter} ${bottomEdge} ${backPath} Z`} 
-        fill="url(#lensGrad)"
-        stroke="rgba(255,255,255,0.3)"
-        strokeWidth="1"
+        d={`${frontPath} L ${cx + semiD * scale} ${cy + ct - s2} ${backPath} Z`} 
+        fill="url(#lensProfileGrad)"
+        stroke="rgba(255,255,255,0.4)"
+        strokeWidth="1.5"
       />
 
-      {/* Linha de centro para espessura central */}
-      <line 
-        x1={centerX} y1={topEdge - 15} x2={centerX} y2={bottomEdge - (isNegative ? 40 : -10)} 
-        stroke="var(--accent-primary)" strokeWidth="1" strokeDasharray="4 2"
-      />
-      <text x={centerX + 5} y={centerY} fill="var(--accent-primary)" fontSize="10" fontWeight="bold">CT: {results.ct.toFixed(1)}mm</text>
-
-      {/* Indicação de borda máxima */}
-      <line 
-        x1={centerX - semiDiameter - 10} y1={topEdge} x2={centerX - semiDiameter - 10} y2={bottomEdge} 
-        stroke="var(--accent-cyan)" strokeWidth="2"
-      />
-      <text x={centerX - semiDiameter - 45} y={centerY} fill="var(--accent-cyan)" fontSize="10" fontWeight="bold" transform={`rotate(-90, ${centerX - semiDiameter - 45}, ${centerY})`}>ET: {results.maxThickness.toFixed(1)}mm</text>
+      {/* Linhas de Cotação */}
+      <g opacity="0.6">
+        {/* Espessura Central */}
+        <line x1={cx} y1={cy} x2={cx} y2={cy + ct} stroke="var(--accent-primary)" strokeWidth="1" strokeDasharray="3 2" />
+        <text x={cx + 5} y={cy + ct/2} fill="var(--accent-primary)" fontSize="9" fontWeight="bold" dominantBaseline="middle">CT: {results.ct.toFixed(1)}mm</text>
+        
+        {/* Espessura de Borda */}
+        <line x1={cx + semiD * scale + 10} y1={cy - s1} x2={cx + semiD * scale + 10} y2={cy + ct - s2} stroke="var(--accent-cyan)" strokeWidth="1.5" />
+        <text 
+          x={cx + semiD * scale + 15} y={cy + (ct - s2 - s1)/2} 
+          fill="var(--accent-cyan)" fontSize="9" fontWeight="bold" dominantBaseline="middle"
+        >
+          ET: {(results.ct + (s2/scale - s1/scale)).toFixed(1)}mm
+        </text>
+      </g>
     </svg>
   );
 }
 
-// Subcomponente SVG para Vista Frontal
-function FrontViewSVG({ results, frame }) {
-  const scale = 3;
-  const width = 200;
-  const height = 150;
+// Subcomponente SVG para Vista Frontal (Premium com Armação Completa)
+function FrameOverviewSVG({ results, frame, selectedEye }) {
+  const scale = 2.5;
+  const width = 400;
+  const height = 180;
   const cx = width / 2;
   const cy = height / 2;
 
   const aroA = frame.a * scale;
   const aroB = frame.b * scale;
+  const bridge = frame.bridge * scale;
+  
+  // Coordenadas dos centros das lentes
+  const distBetweenCenters = aroA + bridge;
+  const odX = cx - distBetweenCenters / 2;
+  const oeX = cx + distBetweenCenters / 2;
+
+  const card = results.cardinals;
+
+  const Callout = ({ x, y, value, label, align = 'center', side = 'top' }) => {
+    const isMain = selectedEye === (x < cx ? 'OD' : 'OE');
+    const color = isMain ? 'var(--accent-primary)' : 'var(--text-muted)';
+    const offset = 25;
+    
+    let lineX = x;
+    let lineY = y;
+    let textX = x;
+    let textY = y;
+
+    if (side === 'top') { textY -= offset; }
+    if (side === 'bottom') { textY += offset; }
+    if (side === 'left') { textX -= offset; }
+    if (side === 'right') { textX += offset; }
+
+    return (
+      <g opacity={isMain ? 1 : 0.4}>
+        <line x1={x} y1={y} x2={textX} y2={textY} stroke={color} strokeWidth="1" />
+        <rect 
+          x={textX - 15} y={textY - 8} width="30" height="16" rx="4" 
+          fill="rgba(0,0,0,0.8)" stroke={color} strokeWidth="0.5" 
+        />
+        <text 
+          x={textX} y={textY} 
+          fill="white" fontSize="9" fontWeight="bold" 
+          textAnchor="middle" dominantBaseline="middle"
+        >
+          {value.toFixed(1)}
+        </text>
+        <text 
+          x={textX} y={textY + (side === 'bottom' ? 15 : -15)} 
+          fill={color} fontSize="7" fontWeight="bold" 
+          textAnchor="middle" className="uppercase tracking-tighter"
+        >
+          {label}
+        </text>
+      </g>
+    );
+  };
 
   return (
     <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
-      {/* Aro da Armação */}
-      <ellipse 
-        cx={cx} cy={cy} rx={aroA / 2} ry={aroB / 2} 
-        fill="rgba(255,255,255,0.05)" 
-        stroke="var(--text-muted)" 
-        strokeWidth="2" 
+      {/* Ponte da Armação */}
+      <path 
+        d={`M ${odX + aroA/2} ${cy - 5} Q ${cx} ${cy - 15} ${oeX - aroA/2} ${cy - 5}`} 
+        fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="4" strokeLinecap="round" 
       />
 
-      {/* Pontos de espessura */}
-      {results.points.map((pt, i) => {
-        const rad = (pt.angle * Math.PI) / 180;
-        const x = cx + (Math.cos(rad) * (aroA / 2 + 15));
-        const y = cy + (Math.sin(rad) * (aroB / 2 + 15));
-        
+      {/* Lentes / Aros */}
+      {[odX, oeX].map((x, i) => {
+        const isSelected = (i === 0 && selectedEye === 'OD') || (i === 1 && selectedEye === 'OE');
         return (
           <g key={i}>
-            <circle cx={cx + (Math.cos(rad) * (aroA / 2))} cy={cy + (Math.sin(rad) * (aroB / 2))} r="3" fill="var(--accent-cyan)" />
-            <text 
-              x={x} y={y} 
-              fill={pt.thickness === results.maxThickness ? 'var(--accent-red)' : 'var(--text-secondary)'} 
-              fontSize="9" 
-              fontWeight="bold" 
-              textAnchor="middle"
-            >
-              {pt.thickness.toFixed(1)}
-            </text>
+            {/* Aro */}
+            <rect 
+              x={x - aroA/2} y={cy - aroB/2} width={aroA} height={aroB} rx={aroA/4} 
+              fill="rgba(255,255,255,0.03)" 
+              stroke={isSelected ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)'} 
+              strokeWidth={isSelected ? 2 : 1} 
+            />
+            
+            {/* Centro Pupilar (se selecionado) */}
+            {isSelected && (
+              <g transform={`translate(${x - (results.decentration * scale * (i === 0 ? 1 : -1))}, ${cy})`}>
+                <circle r="3" fill="var(--accent-primary)" />
+                <line x1="-5" y1="0" x2="5" y2="0" stroke="white" strokeWidth="0.5" />
+                <line x1="0" y1="-5" x2="0" y2="5" stroke="white" strokeWidth="0.5" />
+              </g>
+            )}
+
+            {/* Labels Cardinais (Apenas se for o olho selecionado) */}
+            {isSelected && (
+              <>
+                <Callout x={x} y={cy - aroB/2} value={card.superior} label="Superior" side="top" />
+                <Callout x={x} y={cy + aroB/2} value={card.inferior} label="Inferior" side="bottom" />
+                <Callout 
+                  x={x + (aroA/2 * (i === 0 ? 1 : -1))} y={cy} 
+                  value={card.nasal} label="Nasal" side={i === 0 ? 'right' : 'left'} 
+                />
+                <Callout 
+                  x={x - (aroA/2 * (i === 0 ? 1 : -1))} y={cy} 
+                  value={card.temporal} label="Temporal" side={i === 0 ? 'left' : 'right'} 
+                />
+              </>
+            )}
           </g>
         );
       })}
 
-      {/* Centro Pupilar */}
-      <circle cx={cx - (results.decentration * scale)} cy={cy} r="4" fill="var(--accent-primary)" />
-      <line x1={cx - (results.decentration * scale) - 5} y1={cy} x2={cx - (results.decentration * scale) + 5} y2={cy} stroke="white" strokeWidth="1" />
-      <line x1={cx - (results.decentration * scale)} y1={cy - 5} x2={cx - (results.decentration * scale)} y2={cy + 5} stroke="white" strokeWidth="1" />
+      {/* Rótulos OD/OE */}
+      <text x={odX} y={cy + aroB/2 + 35} fill="var(--text-muted)" fontSize="10" fontWeight="bold" textAnchor="middle">OLHO DIREITO (OD)</text>
+      <text x={oeX} y={cy + aroB/2 + 35} fill="var(--text-muted)" fontSize="10" fontWeight="bold" textAnchor="middle">OLHO ESQUERDO (OE)</text>
     </svg>
   );
 }
