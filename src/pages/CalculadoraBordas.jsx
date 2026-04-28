@@ -11,7 +11,7 @@ import {
   Settings2,
   AlertCircle
 } from 'lucide-react';
-import { MATERIALS, calculateLensThickness } from '../services/lensCalculations';
+import { MATERIALS, calculateLensThickness, getPowerAtMeridian, calculateSagitta } from '../services/lensCalculations';
 
 const INITIAL_RX = {
   sphere: 0.00,
@@ -287,23 +287,9 @@ function LensProfileSVG({ results, material, viewAngle, activeRx }) {
   const cx = width / 2;
   const cy = height / 2;
 
-  // Calculamos a espessura no ângulo específico
-  const getPowerAtMeridian = (s, c, a, target) => {
-    const thetaRad = ((target - a) * Math.PI) / 180;
-    return s + c * Math.pow(Math.sin(thetaRad), 2);
-  };
-
-  const calculateSagitta = (F, n, y) => {
-    if (F === 0) return 0;
-    const R = ((n - 1) * 1000) / F;
-    const absR = Math.abs(R);
-    if (y >= absR) return absR;
-    return absR - Math.sqrt(Math.pow(absR, 2) - Math.pow(y, 2));
-  };
-
   const power = getPowerAtMeridian(activeRx.sphere, activeRx.cylinder, activeRx.axis, viewAngle);
   const f1 = results.baseCurve;
-  const f2 = f1 - power;
+  const f2 = power - f1; // F_total = F1 + F2 => F2 = P - F1
 
   const lensWidth = 70; // mm
   const semiD = lensWidth / 2;
@@ -312,16 +298,26 @@ function LensProfileSVG({ results, material, viewAngle, activeRx }) {
   const s1 = calculateSagitta(f1, material.index, semiD) * scale;
   const s2 = calculateSagitta(f2, material.index, semiD) * scale;
 
-  // Pontos do perfil
-  // Frente: (x, s1)
-  // Trás: (x, ct + s2)
-  const isNeg = results.se < 0;
+  // Centro da lente
+  const cx_front = cx - ct / 2;
+  const cx_back = cx + ct / 2;
 
-  // Path da Frente (Sempre convexa/plana para o observador externo)
-  const frontPath = `M ${cx - semiD * scale} ${cy - s1} Q ${cx} ${cy}, ${cx + semiD * scale} ${cy - s1}`;
+  // Bordas X
+  const front_edge_x = cx_front + s1;
+  const back_edge_x = cx_back - s2;
+
+  // Pontos de controle Q
+  const front_ctrl_x = cx_front - s1;
+  const back_ctrl_x = cx_back + s2;
+
+  const top_y = cy - semiD * scale;
+  const bottom_y = cy + semiD * scale;
+
+  // Path da Frente (vai de topo para base)
+  const frontPath = `M ${front_edge_x} ${top_y} Q ${front_ctrl_x} ${cy}, ${front_edge_x} ${bottom_y}`;
   
-  // Path de Trás
-  const backPath = `M ${cx + semiD * scale} ${cy + ct - s2} Q ${cx} ${cy + ct}, ${cx - semiD * scale} ${cy + ct - s2}`;
+  // Path de Trás (vai da base para o topo)
+  const backPath = `M ${back_edge_x} ${bottom_y} Q ${back_ctrl_x} ${cy}, ${back_edge_x} ${top_y}`;
 
   return (
     <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} className="drop-shadow-2xl">
@@ -335,7 +331,7 @@ function LensProfileSVG({ results, material, viewAngle, activeRx }) {
       
       {/* Corpo da Lente */}
       <path 
-        d={`${frontPath} L ${cx + semiD * scale} ${cy + ct - s2} ${backPath} Z`} 
+        d={`${frontPath} L ${back_edge_x} ${bottom_y} ${backPath} Z`} 
         fill="url(#lensProfileGrad)"
         stroke="rgba(255,255,255,0.4)"
         strokeWidth="1.5"
@@ -344,16 +340,16 @@ function LensProfileSVG({ results, material, viewAngle, activeRx }) {
       {/* Linhas de Cotação */}
       <g opacity="0.6">
         {/* Espessura Central */}
-        <line x1={cx} y1={cy} x2={cx} y2={cy + ct} stroke="var(--accent-primary)" strokeWidth="1" strokeDasharray="3 2" />
-        <text x={cx + 5} y={cy + ct/2} fill="var(--accent-primary)" fontSize="9" fontWeight="bold" dominantBaseline="middle">CT: {results.ct.toFixed(1)}mm</text>
+        <line x1={cx_front} y1={cy} x2={cx_back} y2={cy} stroke="var(--accent-primary)" strokeWidth="1" strokeDasharray="3 2" />
+        <text x={cx_back + 5} y={cy} fill="var(--accent-primary)" fontSize="9" fontWeight="bold" dominantBaseline="middle">CT: {results.ct.toFixed(1)}mm</text>
         
-        {/* Espessura de Borda */}
-        <line x1={cx + semiD * scale + 10} y1={cy - s1} x2={cx + semiD * scale + 10} y2={cy + ct - s2} stroke="var(--accent-cyan)" strokeWidth="1.5" />
+        {/* Espessura de Borda (no topo) */}
+        <line x1={front_edge_x} y1={top_y} x2={back_edge_x} y2={top_y} stroke="var(--accent-cyan)" strokeWidth="1.5" />
         <text 
-          x={cx + semiD * scale + 15} y={cy + (ct - s2 - s1)/2} 
+          x={Math.max(front_edge_x, back_edge_x) + 5} y={top_y} 
           fill="var(--accent-cyan)" fontSize="9" fontWeight="bold" dominantBaseline="middle"
         >
-          ET: {(results.ct + (s2/scale - s1/scale)).toFixed(1)}mm
+          ET: {((ct - s2 - s1)/scale).toFixed(1)}mm
         </text>
       </g>
     </svg>

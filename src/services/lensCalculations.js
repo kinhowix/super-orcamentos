@@ -35,7 +35,7 @@ export function calculateSagitta(F, n, y) {
   if (y >= absR) return absR; // Limite físico
   
   const s = absR - Math.sqrt(Math.pow(absR, 2) - Math.pow(y, 2));
-  return F > 0 ? s : -s; // Positiva para convexas, negativa para côncavas
+  return Math.sign(F) * s; // Positiva para convexas, negativa para côncavas
 }
 
 /**
@@ -80,12 +80,17 @@ export function calculateLensThickness(params) {
   let ct = 2.0; 
   if (se > 0) {
     const maxPower = Math.max(
-      Math.abs(getPowerAtMeridian(sphere, cylinder, axis, 0)),
-      Math.abs(getPowerAtMeridian(sphere, cylinder, axis, 90))
+      getPowerAtMeridian(sphere, cylinder, axis, 0),
+      getPowerAtMeridian(sphere, cylinder, axis, 90)
     );
-    const s1 = Math.abs(calculateSagitta(f1, index, semiDiameter));
-    const s2 = Math.abs(calculateSagitta(f1 - maxPower, index, semiDiameter));
-    ct = 1.0 + Math.abs(s2 - s1);
+    const F2_max = maxPower - f1;
+    const s1 = calculateSagitta(f1, index, semiDiameter);
+    const s2 = calculateSagitta(F2_max, index, semiDiameter);
+    // ET = CT - s2 - s1
+    // For positive lenses, we want the minimum edge thickness to be 1.0mm
+    // So 1.0 = CT - s2 - s1 => CT = 1.0 + s1 + s2
+    ct = 1.0 + s1 + s2;
+    if (ct < 1.5) ct = 1.5; // Segurança
   } else {
     ct = (index >= 1.59) ? 1.2 : 1.8; 
   }
@@ -97,15 +102,17 @@ export function calculateLensThickness(params) {
   // Calculamos em intervalos menores para encontrar o máximo real
   for (let angle = 0; angle < 360; angle += 15) {
     const power = getPowerAtMeridian(sphere, cylinder, axis, angle);
-    const f2 = f1 - power;
+    const f2 = power - f1; // F_total = F1 + F2 => F2 = P - F1
 
-    const s1 = Math.abs(calculateSagitta(f1, index, semiDiameter));
-    const s2 = Math.abs(calculateSagitta(f2, index, semiDiameter));
+    const s1 = calculateSagitta(f1, index, semiDiameter);
+    const s2 = calculateSagitta(f2, index, semiDiameter);
 
-    // Espessura de borda = CT + s_back - s_front (para lentes positivas s1 > s2, para negativas s2 > s1)
-    const et = ct + (s2 - s1);
+    // Front edge X = s1
+    // Back edge X = CT - s2
+    // Edge thickness = Back edge X - Front edge X = CT - s2 - s1
+    const et = ct - s2 - s1;
     
-    points.push({ angle, thickness: et });
+    points.push({ angle, thickness: et, s1, s2, f2 });
     maxThickness = Math.max(maxThickness, et);
     minThickness = Math.min(minThickness, et);
   }
