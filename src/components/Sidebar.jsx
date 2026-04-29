@@ -9,7 +9,9 @@ import {
   Calculator,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  Eye,
+  Activity
 } from 'lucide-react'
 
 const navItems = [
@@ -25,6 +27,14 @@ const navItems = [
       { path: '/cadastro-lentes', icon: PlusCircle, label: 'Cadastrar Lentes' },
       { path: '/catalogo', icon: Glasses, label: 'Catálogo' },
       { path: '/calculadora-bordas', icon: Calculator, label: 'Calculadora de Bordas' },
+    ]
+  },
+  {
+    section: 'Lentes de Contato',
+    items: [
+      { path: '/cadastro-lentes-contato', icon: PlusCircle, label: 'Cadastrar Contato' },
+      { path: '/catalogo-contato', icon: Glasses, label: 'Catálogo Contato' },
+      { path: '/novo-orcamento-contato', icon: Activity, label: 'Orçamento Contato' },
     ]
   },
   {
