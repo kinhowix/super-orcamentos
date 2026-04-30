@@ -59,20 +59,21 @@ export default function CatalogoContato() {
         </button>
       </div>
 
-      <div className="card">
-        <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)' }}>
-          <div className="search-bar" style={{ maxWidth: '400px' }}>
-            <Search size={20} color="var(--text-muted)" />
+      <div className="actions-bar">
+        <div className="actions-left" style={{ flex: 1 }}>
+          <div className="search-box" style={{ flex: 1, maxWidth: '400px' }}>
+            <Search size={16} className="search-icon" />
             <input
-              type="text"
+              className="form-input"
               placeholder="Buscar por marca ou modelo..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
+              onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
+      </div>
 
+      <div className="card">
         <div className="table-container">
           <table className="data-table">
             <thead>
