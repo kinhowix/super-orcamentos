@@ -47,6 +47,7 @@ export function calculateLensThickness(params) {
     cylinder,
     axis,
     index,
+    density = 1.20, // Default density
     a, // Horizontal do aro (mm)
     b, // Vertical do aro (mm)
     bridge, // Ponte (mm)
@@ -130,6 +131,14 @@ export function calculateLensThickness(params) {
     temporal: selectedEye === 'OD' ? getThicknessAt(0) : getThicknessAt(180),
   };
 
+  // Estimativa de Peso (Aproximação Volumétrica Cilíndrica)
+  // Área em mm2 = PI * (Raio Efetivo)^2
+  const area = Math.PI * Math.pow(effectiveDiameter / 2, 2);
+  const avgThickness = (ct + maxThickness) / 2;
+  const volumeMm3 = area * avgThickness;
+  const volumeCm3 = volumeMm3 / 1000;
+  const weight = volumeCm3 * density; // em gramas
+
   return {
     ct,
     maxThickness,
@@ -140,6 +149,7 @@ export function calculateLensThickness(params) {
     decentration,
     effectiveDiameter,
     f1,
-    se
+    se,
+    weight
   };
 }

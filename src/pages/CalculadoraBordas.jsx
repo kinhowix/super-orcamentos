@@ -1,61 +1,60 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { 
   Calculator, 
-  Info, 
-  ArrowRight, 
-  Layers, 
-  Maximize2, 
-  Weight, 
-  Dna,
-  Eye,
-  Settings2,
   AlertCircle
 } from 'lucide-react';
-import { MATERIALS, calculateLensThickness, getPowerAtMeridian, calculateSagitta } from '../services/lensCalculations';
+import { MATERIALS, calculateLensThickness } from '../services/lensCalculations';
 
 const INITIAL_RX = {
   sphere: 0.00,
   cylinder: 0.00,
   axis: 0,
   dnp: 32,
+  matIndex: 0 // Default material index
 };
 
 const INITIAL_FRAME = {
-  a: 54,
-  b: 38,
-  bridge: 17,
-  ed: 56,
-  type: 'full-rim' // full-rim, supra, rimless
+  type: 'Acetato - Fechado',
+  a: 52, // MHA
+  b: 40, // MVA
+  bridge: 20, // PONTE
+  ed: 61, // DMA
+  alt: 16 // ALT
 };
 
 export default function CalculadoraBordas() {
-  const [od, setOd] = useState({ ...INITIAL_RX });
-  const [oe, setOe] = useState({ ...INITIAL_RX });
+  const [od, setOd] = useState({ ...INITIAL_RX, dnp: 28 });
+  const [oe, setOe] = useState({ ...INITIAL_RX, dnp: 28 });
   const [frame, setFrame] = useState({ ...INITIAL_FRAME });
-  const [materialIndex, setMaterialIndex] = useState(0);
-  const [selectedEye, setSelectedEye] = useState('OD');
-  
-  const activeRx = selectedEye === 'OD' ? od : oe;
-  const material = MATERIALS[materialIndex];
 
-  // Cálculos em tempo real
-  const results = useMemo(() => {
+  // Cálculos em tempo real para ambos os olhos
+  const resultsOD = useMemo(() => {
     return calculateLensThickness({
-      ...activeRx,
+      ...od,
       ...frame,
-      index: material.index,
-      selectedEye
+      index: MATERIALS[od.matIndex].index,
+      density: MATERIALS[od.matIndex].density,
+      selectedEye: 'OD'
     });
-  }, [activeRx, frame, material, selectedEye]);
+  }, [od, frame]);
 
-  // Handler para inputs de RX
+  const resultsOE = useMemo(() => {
+    return calculateLensThickness({
+      ...oe,
+      ...frame,
+      index: MATERIALS[oe.matIndex].index,
+      density: MATERIALS[oe.matIndex].density,
+      selectedEye: 'OE'
+    });
+  }, [oe, frame]);
+
+  // Handlers
   const handleRxChange = (eye, field, value) => {
-    const val = parseFloat(value) || 0;
+    const val = field === 'matIndex' ? parseInt(value) : (parseFloat(value) || 0);
     if (eye === 'OD') setOd(prev => ({ ...prev, [field]: val }));
     else setOe(prev => ({ ...prev, [field]: val }));
   };
 
-  // Handler para inputs de armação
   const handleFrameChange = (field, value) => {
     const val = field === 'type' ? value : (parseFloat(value) || 0);
     setFrame(prev => ({ ...prev, [field]: val }));
@@ -70,295 +69,214 @@ export default function CalculadoraBordas() {
           </div>
           <h1>Calculadora de Bordas</h1>
         </div>
-        <p>Simule a espessura das lentes com base nos graus, medidas e materiais escolhidos.</p>
+        <p>Simulação avançada com representação simultânea de ambos os olhos.</p>
       </header>
 
-      <div className="content-grid" style={{ gridTemplateColumns: '1fr 1.5fr' }}>
-        {/* Coluna de Inputs */}
+      <div className="content-grid" style={{ gridTemplateColumns: '380px 1fr' }}>
+        
+        {/* COLUNA ESQUERDA: INPUTS */}
         <div className="flex flex-col gap-6">
           
-          {/* Card de Prescrição */}
+          {/* Dados da Armação */}
           <div className="card">
-            <div className="card-header">
-              <div className="flex items-center gap-2">
-                <Settings2 size={18} className="text-accent-primary" />
-                <h2 className="card-title">Graus e Medidas</h2>
-              </div>
-              <div className="flex bg-bg-secondary p-1 rounded-lg">
-                <button 
-                  className={`px-4 py-1 text-xs font-bold rounded-md transition-all ${selectedEye === 'OD' ? 'bg-accent-primary text-white' : 'text-text-secondary'}`}
-                  onClick={() => setSelectedEye('OD')}
-                >
-                  OD
-                </button>
-                <button 
-                  className={`px-4 py-1 text-xs font-bold rounded-md transition-all ${selectedEye === 'OE' ? 'bg-accent-primary text-white' : 'text-text-secondary'}`}
-                  onClick={() => setSelectedEye('OE')}
-                >
-                  OE
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="form-group">
-                <label className="form-label">Esférico</label>
-                <input 
-                  type="number" step="0.25" className="form-input" 
-                  value={activeRx.sphere} 
-                  onChange={(e) => handleRxChange(selectedEye, 'sphere', e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Cilíndrico</label>
-                <input 
-                  type="number" step="0.25" className="form-input" 
-                  value={activeRx.cylinder} 
-                  onChange={(e) => handleRxChange(selectedEye, 'cylinder', e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Eixo</label>
-                <input 
-                  type="number" className="form-input" 
-                  value={activeRx.axis} 
-                  onChange={(e) => handleRxChange(selectedEye, 'axis', e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">DNP (mm)</label>
-                <input 
-                  type="number" className="form-input" 
-                  value={activeRx.dnp} 
-                  onChange={(e) => handleRxChange(selectedEye, 'dnp', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-white/5">
-              <label className="form-label">Material / Índice</label>
-              <select 
-                className="form-select" 
-                value={materialIndex}
-                onChange={(e) => setMaterialIndex(parseInt(e.target.value))}
-              >
-                {MATERIALS.map((m, i) => (
-                  <option key={m.name} value={i}>{m.name} (n={m.index.toFixed(3)})</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Card de Armação */}
-          <div className="card">
-            <div className="card-header">
-              <div className="flex items-center gap-2">
-                <Maximize2 size={18} className="text-accent-amber" />
-                <h2 className="card-title">Medidas da Armação</h2>
-              </div>
+            <div className="card-header bg-bg-secondary p-3 -mx-6 -mt-6 mb-4 rounded-t-2xl border-b border-white/5">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-text-secondary">Dados da Armação</h2>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div className="form-group">
-                <label className="form-label">Aro (A)</label>
-                <input 
-                  type="number" className="form-input" 
-                  value={frame.a} 
-                  onChange={(e) => handleFrameChange('a', e.target.value)}
-                />
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-bold text-text-secondary w-12">TIPO</label>
+                <select 
+                  className="form-select flex-1 bg-black/20" 
+                  value={frame.type} 
+                  onChange={e => handleFrameChange('type', e.target.value)}
+                >
+                  <option value="Acetato - Fechado">Acetato - Fechado</option>
+                  <option value="Metal - Fechado">Metal - Fechado</option>
+                  <option value="Nylon - Meio Aro">Nylon - Meio Aro</option>
+                  <option value="Parafusada - Balgrife">Parafusada - Balgrife</option>
+                </select>
               </div>
-              <div className="form-group">
-                <label className="form-label">Ponte</label>
+
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-bold text-text-secondary w-12">PONTE</label>
                 <input 
-                  type="number" className="form-input" 
+                  type="number" className="form-input w-24 bg-black/20 text-center" 
                   value={frame.bridge} 
-                  onChange={(e) => handleFrameChange('bridge', e.target.value)}
+                  onChange={e => handleFrameChange('bridge', e.target.value)}
                 />
               </div>
-              <div className="form-group">
-                <label className="form-label">Altura (B)</label>
-                <input 
-                  type="number" className="form-input" 
-                  value={frame.b} 
-                  onChange={(e) => handleFrameChange('b', e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">M. Diagonal (ED)</label>
-                <input 
-                  type="number" className="form-input" 
-                  value={frame.ed} 
-                  onChange={(e) => handleFrameChange('ed', e.target.value)}
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-bold text-text-secondary w-12" title="Maior Horizontal do Aro">MHA</label>
+                  <input 
+                    type="number" className="form-input flex-1 bg-black/20 text-center" 
+                    value={frame.a} 
+                    onChange={e => handleFrameChange('a', e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-bold text-text-secondary w-12" title="Maior Vertical do Aro">MVA</label>
+                  <input 
+                    type="number" className="form-input flex-1 bg-black/20 text-center" 
+                    value={frame.b} 
+                    onChange={e => handleFrameChange('b', e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-bold text-text-secondary w-12">ALT</label>
+                  <input 
+                    type="number" className="form-input flex-1 bg-black/20 text-center" 
+                    value={frame.alt} 
+                    onChange={e => handleFrameChange('alt', e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-bold text-text-secondary w-12" title="Diagonal Maior">DMA</label>
+                  <input 
+                    type="number" className="form-input flex-1 bg-black/20 text-center" 
+                    value={frame.ed} 
+                    onChange={e => handleFrameChange('ed', e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Dados da Lente */}
+          <div className="card">
+            <div className="card-header bg-bg-secondary p-3 -mx-6 -mt-6 mb-4 rounded-t-2xl border-b border-white/5">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-text-secondary">Dados da Lente</h2>
+            </div>
+            
+            <table className="w-full text-sm">
+              <thead>
+                <tr>
+                  <th className="w-12"></th>
+                  <th className="text-center pb-3 text-xs font-bold text-text-secondary">OD</th>
+                  <th className="text-center pb-3 text-xs font-bold text-text-secondary">OE</th>
+                </tr>
+              </thead>
+              <tbody className="space-y-3">
+                <tr>
+                  <td className="text-xs font-bold text-text-secondary align-middle pr-2">MAT</td>
+                  <td className="pr-2 pb-3">
+                    <select className="form-select w-full bg-black/20 text-xs py-1.5 px-1 h-auto" value={od.matIndex} onChange={e => handleRxChange('OD', 'matIndex', e.target.value)}>
+                      {MATERIALS.map((m, i) => <option key={i} value={i}>{m.name.split(' ')[0]} {m.index.toFixed(2)}</option>)}
+                    </select>
+                  </td>
+                  <td className="pb-3">
+                    <select className="form-select w-full bg-black/20 text-xs py-1.5 px-1 h-auto" value={oe.matIndex} onChange={e => handleRxChange('OE', 'matIndex', e.target.value)}>
+                      {MATERIALS.map((m, i) => <option key={i} value={i}>{m.name.split(' ')[0]} {m.index.toFixed(2)}</option>)}
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="text-xs font-bold text-text-secondary align-middle pr-2">DNP</td>
+                  <td className="pr-2 pb-3"><input type="number" step="0.5" className="form-input w-full bg-black/20 text-center py-1.5 h-auto text-xs" value={od.dnp} onChange={e => handleRxChange('OD', 'dnp', e.target.value)} /></td>
+                  <td className="pb-3"><input type="number" step="0.5" className="form-input w-full bg-black/20 text-center py-1.5 h-auto text-xs" value={oe.dnp} onChange={e => handleRxChange('OE', 'dnp', e.target.value)} /></td>
+                </tr>
+                <tr>
+                  <td className="text-xs font-bold text-text-secondary align-middle pr-2">ESF</td>
+                  <td className="pr-2 pb-3"><input type="number" step="0.25" className="form-input w-full bg-black/20 text-center py-1.5 h-auto text-xs" value={od.sphere} onChange={e => handleRxChange('OD', 'sphere', e.target.value)} /></td>
+                  <td className="pb-3"><input type="number" step="0.25" className="form-input w-full bg-black/20 text-center py-1.5 h-auto text-xs" value={oe.sphere} onChange={e => handleRxChange('OE', 'sphere', e.target.value)} /></td>
+                </tr>
+                <tr>
+                  <td className="text-xs font-bold text-text-secondary align-middle pr-2">CIL</td>
+                  <td className="pr-2 pb-3"><input type="number" step="0.25" className="form-input w-full bg-black/20 text-center py-1.5 h-auto text-xs" value={od.cylinder} onChange={e => handleRxChange('OD', 'cylinder', e.target.value)} /></td>
+                  <td className="pb-3"><input type="number" step="0.25" className="form-input w-full bg-black/20 text-center py-1.5 h-auto text-xs" value={oe.cylinder} onChange={e => handleRxChange('OE', 'cylinder', e.target.value)} /></td>
+                </tr>
+                <tr>
+                  <td className="text-xs font-bold text-text-secondary align-middle pr-2">EIXO</td>
+                  <td className="pr-2"><input type="number" className="form-input w-full bg-black/20 text-center py-1.5 h-auto text-xs" value={od.axis} onChange={e => handleRxChange('OD', 'axis', e.target.value)} /></td>
+                  <td><input type="number" className="form-input w-full bg-black/20 text-center py-1.5 h-auto text-xs" value={oe.axis} onChange={e => handleRxChange('OE', 'axis', e.target.value)} /></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
         </div>
 
-        {/* Coluna de Visualização */}
-        <div className="flex flex-col gap-6">
-          
-          {/* Card Principal de Visualização */}
-          <div className="card h-full flex flex-col">
-            <div className="card-header">
-              <div className="flex items-center gap-2">
-                <Layers size={18} className="text-accent-cyan" />
-                <h2 className="card-title">Simulação Visual</h2>
-              </div>
-              <div className="badge badge-cyan">Representação Aproximada</div>
+        {/* COLUNA DIREITA: SIMULAÇÃO */}
+        <div className="card flex flex-col items-center min-h-[600px]">
+          <div className="w-full card-header bg-bg-secondary p-3 -mx-6 -mt-6 mb-6 rounded-t-2xl border-b border-white/5 flex justify-between items-center">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-text-secondary">Simulação Visual OD/OE</h2>
+            <div className="badge badge-cyan">Representação Aproximada</div>
+          </div>
+
+          <div className="w-full flex-1 flex flex-col items-center">
+            {/* VISTA FRONTAL (Ambos os olhos) */}
+            <div className="w-full max-w-[650px] mb-6">
+              <FrameOverviewSVG resultsOD={resultsOD} resultsOE={resultsOE} frame={frame} />
             </div>
 
-            <div className="flex-1 flex flex-col justify-center items-center py-4 bg-black/20 rounded-xl border border-white/5 relative overflow-hidden px-4">
-              {/* SVG de Perfil (Topo) */}
-              <div className="w-full max-w-[500px] mb-8">
-                <div className="flex justify-center items-center mb-4">
-                  <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Perfil da Lente</h4>
+            {/* CURVA BASE, PESO E BLOCO */}
+            <div className="w-full max-w-[500px] flex justify-between mb-8">
+              {/* Box OD */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="text-center">
+                  <div className="text-xs text-text-secondary font-bold">Curva base ideal {resultsOD.baseCurve.toFixed(2)}</div>
+                  <div className="text-[10px] text-text-muted">Peso estimado {resultsOD.weight.toFixed(1)} g</div>
                 </div>
-                <LensProfileSVG 
-                  results={results} 
-                  activeRx={activeRx}
-                />
+                <div className="relative w-20 h-20 rounded-full border border-dashed border-accent-cyan/30 bg-accent-cyan/5 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="h-full w-[1px] bg-accent-cyan/20 rotate-45"></div>
+                  </div>
+                  <div className="bg-bg-primary px-2 py-1 rounded text-xs font-bold text-accent-cyan z-10">
+                    {Math.ceil(resultsOD.effectiveDiameter)}mm
+                  </div>
+                </div>
               </div>
 
-              {/* SVG Frontal Premium */}
-              <div className="w-full">
-                <h4 className="text-center text-[10px] font-bold text-text-muted uppercase tracking-widest mb-6">Vista Frontal (Espessuras Cardeais)</h4>
-                <FrameOverviewSVG results={results} frame={frame} selectedEye={selectedEye} />
-              </div>
-
-              {/* Legenda de Escala Real */}
-              <div className="absolute bottom-4 right-4 flex items-center gap-2 text-[10px] text-text-muted">
-                <div className="w-10 h-[1px] bg-text-muted"></div>
-                <span>Simulação Visual</span>
+              {/* Box OE */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="text-center">
+                  <div className="text-xs text-text-secondary font-bold">Curva base ideal {resultsOE.baseCurve.toFixed(2)}</div>
+                  <div className="text-[10px] text-text-muted">Peso estimado {resultsOE.weight.toFixed(1)} g</div>
+                </div>
+                <div className="relative w-20 h-20 rounded-full border border-dashed border-accent-cyan/30 bg-accent-cyan/5 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="h-full w-[1px] bg-accent-cyan/20 rotate-45"></div>
+                  </div>
+                  <div className="bg-bg-primary px-2 py-1 rounded text-xs font-bold text-accent-cyan z-10">
+                    {Math.ceil(resultsOE.effectiveDiameter)}mm
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Badges de Resultado */}
-            <div className="grid grid-cols-3 gap-4 mt-6">
-              <div className="bg-bg-secondary p-4 rounded-xl border border-white/5 flex flex-col items-center">
-                <Maximize2 size={16} className="text-accent-primary mb-2" />
-                <span className="text-[10px] uppercase text-text-secondary font-bold">Máxima</span>
-                <span className="text-xl font-bold">{results.maxThickness.toFixed(1)}mm</span>
+            {/* PERFIS DAS LENTES (Animados Lado a Lado) */}
+            <div className="w-full max-w-[500px] flex justify-between mt-auto pb-4">
+              <div className="w-[45%] flex flex-col items-center">
+                <LensProfileSVG results={resultsOD} rx={od} label="PERFIL OD" />
               </div>
-              <div className="bg-bg-secondary p-4 rounded-xl border border-white/5 flex flex-col items-center">
-                <Dna size={16} className="text-accent-green mb-2" />
-                <span className="text-[10px] uppercase text-text-secondary font-bold">Base</span>
-                <span className="text-xl font-bold">{results.baseCurve.toFixed(2)}</span>
-              </div>
-              <div className="bg-bg-secondary p-4 rounded-xl border border-white/5 flex flex-col items-center">
-                <ArrowRight size={16} className="text-accent-amber mb-2" />
-                <span className="text-[10px] uppercase text-text-secondary font-bold">Descentr.</span>
-                <span className="text-xl font-bold">{results.decentration.toFixed(1)}mm</span>
+              <div className="w-[45%] flex flex-col items-center">
+                <LensProfileSVG results={resultsOE} rx={oe} label="PERFIL OE" />
               </div>
             </div>
           </div>
+          
         </div>
       </div>
-
+      
       <div className="mt-8 p-4 bg-accent-amber-bg border border-accent-amber/20 rounded-xl flex gap-3 items-start">
         <AlertCircle className="text-accent-amber shrink-0" size={20} />
         <p className="text-xs text-text-secondary">
-          <strong>Aviso Importante:</strong> Esta calculadora fornece estimativas baseadas em fórmulas matemáticas ideais. A espessura real pode variar dependendo da marca da lente, otimizações de laboratório (surfaçagem digital), curva base exata e características específicas da armação. A visualização é meramente ilustrativa.
+          <strong>Aviso Importante:</strong> Esta calculadora fornece estimativas baseadas em fórmulas matemáticas ideais e aproximações volumétricas. A espessura e peso reais variam dependendo da surfaçagem digital e laboratório.
         </p>
       </div>
     </div>
   );
 }
 
-// Subcomponente SVG para o Perfil Simplificado Animado
-function LensProfileSVG({ results, activeRx }) {
-  const width = 400;
-  const height = 180;
-  
-  const esferico = parseFloat(activeRx.sphere) || 0;
-  const cilindro = parseFloat(activeRx.cylinder) || 0;
-  const equivalenteEsferico = esferico + (cilindro / 2);
-  const isPositive = equivalenteEsferico > 0;
-  
-  // Escala para aumentar o impacto visual do milímetro
-  const scale = 5; 
-  // Limites mínimos reduzidos para 2px (representando ~0.4mm na escala) para permitir bordas 
-  // ultra-finas em positivas e centros ultra-finos em negativas, mantendo precisão óptica.
-  const CT = Math.max(results.ct * scale, 2); 
-  const ET = Math.max(results.maxThickness * scale, 2); 
-
-  let lensPath = "";
-  let centerLeftX = 0;
-  let edgeRightX = 0;
-
-  if (isPositive) {
-    // Lente Positiva (Centro grosso, Borda fina)
-    const frontEdgeX = 190;
-    const backEdgeX = frontEdgeX + ET;
-    const backCenterX = backEdgeX - 30; // Curva interna base
-    const frontCenterX = backCenterX - CT;
-
-    lensPath = `M ${frontEdgeX} 30 Q ${frontCenterX} 90, ${frontEdgeX} 150 L ${backEdgeX} 150 Q ${backCenterX} 90, ${backEdgeX} 30 Z`;
-    centerLeftX = frontCenterX;
-    edgeRightX = backEdgeX;
-  } else {
-    // Lente Negativa (Centro fino, Borda grossa)
-    const frontEdgeX = 180;
-    const backEdgeX = frontEdgeX + ET;
-    const frontCenterX = frontEdgeX - 20; // Curva externa base
-    const backCenterX = frontCenterX + CT;
-
-    lensPath = `M ${frontEdgeX} 30 Q ${frontCenterX} 90, ${frontEdgeX} 150 L ${backEdgeX} 150 Q ${backCenterX} 90, ${backEdgeX} 30 Z`;
-    centerLeftX = frontCenterX;
-    edgeRightX = backEdgeX;
-  }
-
-  const label = isPositive ? "Lente Positiva (Hipermetropia)" : "Lente Negativa (Miopia / Plano)";
-  
-  // Usamos CSS styles de transition no path e nas linhas para animar suavemente a mudança
-  return (
-    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} className="drop-shadow-2xl">
-      <defs>
-        <linearGradient id="lensProfileGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="rgba(100, 210, 255, 0.5)" />
-          <stop offset="50%" stopColor="rgba(100, 210, 255, 0.2)" />
-          <stop offset="100%" stopColor="rgba(100, 210, 255, 0.5)" />
-        </linearGradient>
-      </defs>
-      
-      {/* Corpo da Lente */}
-      <path 
-        d={lensPath} 
-        fill="url(#lensProfileGrad)"
-        stroke="rgba(255,255,255,0.6)"
-        strokeWidth="1.5"
-        style={{ transition: 'all 0.4s ease-out' }}
-      />
-
-      <text x={width/2} y={15} fill="var(--text-secondary)" fontSize="11" fontWeight="bold" textAnchor="middle" className="uppercase tracking-widest">
-        {label}
-      </text>
-
-      {/* Medidas */}
-      <g opacity="0.9" style={{ transition: 'all 0.4s ease-out' }}>
-        {/* Espessura Central */}
-        <line x1={20} y1={90} x2={centerLeftX} y2={90} stroke="var(--accent-primary)" strokeWidth="1" strokeDasharray="3 3" />
-        <text x={15} y={90} fill="var(--accent-primary)" fontSize="11" fontWeight="bold" textAnchor="end" dominantBaseline="middle">
-          Centro: {results.ct.toFixed(1)}mm
-        </text>
-
-        {/* Espessura de Borda Máxima */}
-        <line x1={edgeRightX} y1={30} x2={340} y2={30} stroke="var(--accent-cyan)" strokeWidth="1" strokeDasharray="3 3" />
-        <text x={345} y={30} fill="var(--accent-cyan)" fontSize="11" fontWeight="bold" textAnchor="start" dominantBaseline="middle">
-          Borda: {results.maxThickness.toFixed(1)}mm
-        </text>
-      </g>
-    </svg>
-  );
-}
-
-// Subcomponente SVG para Vista Frontal (Premium com Armação Completa)
-function FrameOverviewSVG({ results, frame, selectedEye }) {
+// Subcomponente SVG para Vista Frontal de Ambos os Olhos
+function FrameOverviewSVG({ resultsOD, resultsOE, frame }) {
   const scale = 2.5;
-  const width = 400;
-  const height = 180;
+  const width = 600;
+  const height = 220;
   const cx = width / 2;
-  const cy = height / 2;
+  const cy = height / 2 + 10;
 
   const aroA = frame.a * scale;
   const aroB = frame.b * scale;
@@ -369,43 +287,19 @@ function FrameOverviewSVG({ results, frame, selectedEye }) {
   const odX = cx - distBetweenCenters / 2;
   const oeX = cx + distBetweenCenters / 2;
 
-  const card = results.cardinals;
-
-  const Callout = ({ x, y, value, label, align = 'center', side = 'top' }) => {
-    const isMain = selectedEye === (x < cx ? 'OD' : 'OE');
-    const color = isMain ? 'var(--accent-primary)' : 'var(--text-muted)';
-    const offset = 25;
-    
-    let lineX = x;
-    let lineY = y;
-    let textX = x;
-    let textY = y;
-
-    if (side === 'top') { textY -= offset; }
-    if (side === 'bottom') { textY += offset; }
-    if (side === 'left') { textX -= offset; }
-    if (side === 'right') { textX += offset; }
-
+  const Callout = ({ x, y, value }) => {
     return (
-      <g opacity={isMain ? 1 : 0.4}>
-        <line x1={x} y1={y} x2={textX} y2={textY} stroke={color} strokeWidth="1" />
+      <g>
         <rect 
-          x={textX - 15} y={textY - 8} width="30" height="16" rx="4" 
-          fill="rgba(0,0,0,0.8)" stroke={color} strokeWidth="0.5" 
+          x={x - 18} y={y - 10} width="36" height="20" rx="10" 
+          fill="rgba(0,0,0,0.8)" stroke="var(--accent-primary)" strokeWidth="0.5" 
         />
         <text 
-          x={textX} y={textY} 
+          x={x} y={y + 1} 
           fill="white" fontSize="9" fontWeight="bold" 
           textAnchor="middle" dominantBaseline="middle"
         >
-          {value.toFixed(1)}
-        </text>
-        <text 
-          x={textX} y={textY + (side === 'bottom' ? 15 : -15)} 
-          fill={color} fontSize="7" fontWeight="bold" 
-          textAnchor="middle" className="uppercase tracking-tighter"
-        >
-          {label}
+          {value.toFixed(1)}mm
         </text>
       </g>
     );
@@ -413,56 +307,121 @@ function FrameOverviewSVG({ results, frame, selectedEye }) {
 
   return (
     <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
+      {/* Rótulos Superiores */}
+      <rect x={odX - 50} y={15} width="100" height="20" rx="10" fill="var(--bg-secondary)" stroke="var(--white-10)" />
+      <text x={odX} y={28} fill="white" fontSize="9" fontWeight="bold" textAnchor="middle">OLHO DIREITO</text>
+
+      <rect x={oeX - 50} y={15} width="100" height="20" rx="10" fill="var(--bg-secondary)" stroke="var(--white-10)" />
+      <text x={oeX} y={28} fill="white" fontSize="9" fontWeight="bold" textAnchor="middle">OLHO ESQUERDO</text>
+
       {/* Ponte da Armação */}
       <path 
-        d={`M ${odX + aroA/2} ${cy - 5} Q ${cx} ${cy - 15} ${oeX - aroA/2} ${cy - 5}`} 
-        fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="4" strokeLinecap="round" 
+        d={`M ${odX + aroA/2} ${cy - 10} Q ${cx} ${cy - 20} ${oeX - aroA/2} ${cy - 10}`} 
+        fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" 
       />
 
-      {/* Lentes / Aros */}
-      {[odX, oeX].map((x, i) => {
-        const isSelected = (i === 0 && selectedEye === 'OD') || (i === 1 && selectedEye === 'OE');
-        return (
-          <g key={i}>
-            {/* Aro */}
-            <rect 
-              x={x - aroA/2} y={cy - aroB/2} width={aroA} height={aroB} rx={aroA/4} 
-              fill="rgba(255,255,255,0.03)" 
-              stroke={isSelected ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)'} 
-              strokeWidth={isSelected ? 2 : 1} 
-            />
-            
-            {/* Centro Pupilar (se selecionado) */}
-            {isSelected && (
-              <g transform={`translate(${x - (results.decentration * scale * (i === 0 ? 1 : -1))}, ${cy})`}>
-                <circle r="3" fill="var(--accent-primary)" />
-                <line x1="-5" y1="0" x2="5" y2="0" stroke="white" strokeWidth="0.5" />
-                <line x1="0" y1="-5" x2="0" y2="5" stroke="white" strokeWidth="0.5" />
-              </g>
-            )}
+      {/* Lente OD */}
+      <g>
+        <path 
+          d={`M ${odX - aroA/2} ${cy - aroB/4} 
+              Q ${odX - aroA/2} ${cy - aroB/2} ${odX} ${cy - aroB/2} 
+              Q ${odX + aroA/2} ${cy - aroB/2} ${odX + aroA/2} ${cy - aroB/4}
+              L ${odX + aroA/2} ${cy + aroB/4}
+              Q ${odX + aroA/2} ${cy + aroB/2} ${odX} ${cy + aroB/2}
+              Q ${odX - aroA/2} ${cy + aroB/2} ${odX - aroA/2} ${cy + aroB/4} Z`}
+          fill="rgba(255,255,255,0.02)" stroke="var(--text-secondary)" strokeWidth="1.5"
+        />
+        
+        {/* Callouts OD */}
+        <Callout x={odX} y={cy - aroB/2} value={resultsOD.cardinals.superior} />
+        <Callout x={odX} y={cy + aroB/2} value={resultsOD.cardinals.inferior} />
+        <Callout x={odX + aroA/2} y={cy} value={resultsOD.cardinals.nasal} />
+        <Callout x={odX - aroA/2} y={cy} value={resultsOD.cardinals.temporal} />
+        <Callout x={odX} y={cy} value={resultsOD.ct} />
+      </g>
 
-            {/* Labels Cardinais (Apenas se for o olho selecionado) */}
-            {isSelected && (
-              <>
-                <Callout x={x} y={cy - aroB/2} value={card.superior} label="Superior" side="top" />
-                <Callout x={x} y={cy + aroB/2} value={card.inferior} label="Inferior" side="bottom" />
-                <Callout 
-                  x={x + (aroA/2 * (i === 0 ? 1 : -1))} y={cy} 
-                  value={card.nasal} label="Nasal" side={i === 0 ? 'right' : 'left'} 
-                />
-                <Callout 
-                  x={x - (aroA/2 * (i === 0 ? 1 : -1))} y={cy} 
-                  value={card.temporal} label="Temporal" side={i === 0 ? 'left' : 'right'} 
-                />
-              </>
-            )}
-          </g>
-        );
-      })}
+      {/* Lente OE */}
+      <g>
+        <path 
+          d={`M ${oeX - aroA/2} ${cy - aroB/4} 
+              Q ${oeX - aroA/2} ${cy - aroB/2} ${oeX} ${cy - aroB/2} 
+              Q ${oeX + aroA/2} ${cy - aroB/2} ${oeX + aroA/2} ${cy - aroB/4}
+              L ${oeX + aroA/2} ${cy + aroB/4}
+              Q ${oeX + aroA/2} ${cy + aroB/2} ${oeX} ${cy + aroB/2}
+              Q ${oeX - aroA/2} ${cy + aroB/2} ${oeX - aroA/2} ${cy + aroB/4} Z`}
+          fill="rgba(255,255,255,0.02)" stroke="var(--text-secondary)" strokeWidth="1.5"
+        />
 
-      {/* Rótulos OD/OE */}
-      <text x={odX} y={cy + aroB/2 + 35} fill="var(--text-muted)" fontSize="10" fontWeight="bold" textAnchor="middle">OLHO DIREITO (OD)</text>
-      <text x={oeX} y={cy + aroB/2 + 35} fill="var(--text-muted)" fontSize="10" fontWeight="bold" textAnchor="middle">OLHO ESQUERDO (OE)</text>
+        {/* Callouts OE */}
+        <Callout x={oeX} y={cy - aroB/2} value={resultsOE.cardinals.superior} />
+        <Callout x={oeX} y={cy + aroB/2} value={resultsOE.cardinals.inferior} />
+        <Callout x={oeX - aroA/2} y={cy} value={resultsOE.cardinals.nasal} />
+        <Callout x={oeX + aroA/2} y={cy} value={resultsOE.cardinals.temporal} />
+        <Callout x={oeX} y={cy} value={resultsOE.ct} />
+      </g>
+    </svg>
+  );
+}
+
+// Subcomponente SVG para o Perfil Simplificado Animado
+function LensProfileSVG({ results, rx, label }) {
+  const width = 200;
+  const height = 120;
+  
+  const esferico = parseFloat(rx.sphere) || 0;
+  const cilindro = parseFloat(rx.cylinder) || 0;
+  const equivalenteEsferico = esferico + (cilindro / 2);
+  const isPositive = equivalenteEsferico > 0;
+  
+  const scale = 3.5; 
+  const CT = Math.max(results.ct * scale, 2); 
+  const ET = Math.max(results.maxThickness * scale, 2); 
+
+  let lensPath = "";
+  
+  const cy = height/2 + 10;
+  const frontY = cy - 40;
+  const backY = cy + 40;
+
+  if (isPositive) {
+    const frontEdgeX = 90;
+    const backEdgeX = frontEdgeX + ET;
+    const backCenterX = backEdgeX - 20; 
+    const frontCenterX = backCenterX - CT;
+
+    lensPath = `M ${frontEdgeX} ${frontY} Q ${frontCenterX} ${cy}, ${frontEdgeX} ${backY} L ${backEdgeX} ${backY} Q ${backCenterX} ${cy}, ${backEdgeX} ${frontY} Z`;
+  } else {
+    const frontEdgeX = 85;
+    const backEdgeX = frontEdgeX + ET;
+    const frontCenterX = frontEdgeX - 10; 
+    const backCenterX = frontCenterX + CT;
+
+    lensPath = `M ${frontEdgeX} ${frontY} Q ${frontCenterX} ${cy}, ${frontEdgeX} ${backY} L ${backEdgeX} ${backY} Q ${backCenterX} ${cy}, ${backEdgeX} ${frontY} Z`;
+  }
+
+  const tipoLabel = isPositive ? "Positiva" : "Negativa";
+  
+  return (
+    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} className="drop-shadow-lg bg-black/10 rounded-xl border border-white/5">
+      <defs>
+        <linearGradient id="lensProfileGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="rgba(100, 210, 255, 0.5)" />
+          <stop offset="50%" stopColor="rgba(100, 210, 255, 0.2)" />
+          <stop offset="100%" stopColor="rgba(100, 210, 255, 0.5)" />
+        </linearGradient>
+      </defs>
+      
+      <text x={width/2} y={20} fill="var(--text-muted)" fontSize="10" fontWeight="bold" textAnchor="middle" className="uppercase tracking-widest">
+        {label} ({tipoLabel})
+      </text>
+
+      <path 
+        d={lensPath} 
+        fill="url(#lensProfileGrad)"
+        stroke="rgba(255,255,255,0.6)"
+        strokeWidth="1.5"
+        style={{ transition: 'all 0.4s ease-out' }}
+      />
     </svg>
   );
 }
