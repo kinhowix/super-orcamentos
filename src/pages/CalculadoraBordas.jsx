@@ -34,9 +34,7 @@ export default function CalculadoraBordas() {
   const [frame, setFrame] = useState({ ...INITIAL_FRAME });
   const [materialIndex, setMaterialIndex] = useState(0);
   const [selectedEye, setSelectedEye] = useState('OD');
-
-  const [viewAngle, setViewAngle] = useState(0);
-
+  
   const activeRx = selectedEye === 'OD' ? od : oe;
   const material = MATERIALS[materialIndex];
 
@@ -213,23 +211,11 @@ export default function CalculadoraBordas() {
             <div className="flex-1 flex flex-col justify-center items-center py-4 bg-black/20 rounded-xl border border-white/5 relative overflow-hidden px-4">
               {/* SVG de Perfil (Topo) */}
               <div className="w-full max-w-[500px] mb-8">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Vista de Perfil (Meridiano {viewAngle}°)</h4>
-                  <div className="flex items-center gap-3 bg-bg-secondary px-3 py-1.5 rounded-full border border-white/10">
-                    <span className="text-[10px] text-text-muted font-mono">0°</span>
-                    <input 
-                      type="range" min="0" max="180" step="15" 
-                      className="w-24 accent-accent-primary h-1 bg-white/10 rounded-lg appearance-none cursor-pointer"
-                      value={viewAngle}
-                      onChange={(e) => setViewAngle(parseInt(e.target.value))}
-                    />
-                    <span className="text-[10px] text-text-muted font-mono">180°</span>
-                  </div>
+                <div className="flex justify-center items-center mb-4">
+                  <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Perfil da Lente</h4>
                 </div>
                 <LensProfileSVG 
                   results={results} 
-                  material={material} 
-                  viewAngle={viewAngle}
                   activeRx={activeRx}
                 />
               </div>
@@ -279,77 +265,87 @@ export default function CalculadoraBordas() {
   );
 }
 
-// Subcomponente SVG para o Perfil (Fidelidade Óptica)
-function LensProfileSVG({ results, material, viewAngle, activeRx }) {
-  const scale = 4; 
-  const width = 450;
+// Subcomponente SVG para o Perfil Simplificado Animado
+function LensProfileSVG({ results, activeRx }) {
+  const width = 400;
   const height = 180;
-  const cx = width / 2;
-  const cy = height / 2;
-
-  const power = getPowerAtMeridian(activeRx.sphere, activeRx.cylinder, activeRx.axis, viewAngle);
-  const f1 = results.baseCurve;
-  const f2 = power - f1; // F_total = F1 + F2 => F2 = P - F1
-
-  const lensWidth = 70; // mm
-  const semiD = lensWidth / 2;
   
-  const ct = results.ct * scale;
-  const s1 = calculateSagitta(f1, material.index, semiD) * scale;
-  const s2 = calculateSagitta(f2, material.index, semiD) * scale;
-
-  // Centro da lente
-  const cx_front = cx - ct / 2;
-  const cx_back = cx + ct / 2;
-
-  // Bordas X
-  const front_edge_x = cx_front + s1;
-  const back_edge_x = cx_back - s2;
-
-  // Pontos de controle Q
-  const front_ctrl_x = cx_front - s1;
-  const back_ctrl_x = cx_back + s2;
-
-  const top_y = cy - semiD * scale;
-  const bottom_y = cy + semiD * scale;
-
-  // Path da Frente (vai de topo para base)
-  const frontPath = `M ${front_edge_x} ${top_y} Q ${front_ctrl_x} ${cy}, ${front_edge_x} ${bottom_y}`;
+  const esferico = parseFloat(activeRx.sphere) || 0;
+  const cilindro = parseFloat(activeRx.cylinder) || 0;
+  const equivalenteEsferico = esferico + (cilindro / 2);
+  const isPositive = equivalenteEsferico > 0;
   
-  // Path de Trás (vai da base para o topo)
-  const backPath = `M ${back_edge_x} ${bottom_y} Q ${back_ctrl_x} ${cy}, ${back_edge_x} ${top_y}`;
+  // Escala para aumentar o impacto visual do milímetro
+  const scale = 5; 
+  // Limites mínimos reduzidos para 2px (representando ~0.4mm na escala) para permitir bordas 
+  // ultra-finas em positivas e centros ultra-finos em negativas, mantendo precisão óptica.
+  const CT = Math.max(results.ct * scale, 2); 
+  const ET = Math.max(results.maxThickness * scale, 2); 
 
+  let lensPath = "";
+  let centerLeftX = 0;
+  let edgeRightX = 0;
+
+  if (isPositive) {
+    // Lente Positiva (Centro grosso, Borda fina)
+    const frontEdgeX = 190;
+    const backEdgeX = frontEdgeX + ET;
+    const backCenterX = backEdgeX - 30; // Curva interna base
+    const frontCenterX = backCenterX - CT;
+
+    lensPath = `M ${frontEdgeX} 30 Q ${frontCenterX} 90, ${frontEdgeX} 150 L ${backEdgeX} 150 Q ${backCenterX} 90, ${backEdgeX} 30 Z`;
+    centerLeftX = frontCenterX;
+    edgeRightX = backEdgeX;
+  } else {
+    // Lente Negativa (Centro fino, Borda grossa)
+    const frontEdgeX = 180;
+    const backEdgeX = frontEdgeX + ET;
+    const frontCenterX = frontEdgeX - 20; // Curva externa base
+    const backCenterX = frontCenterX + CT;
+
+    lensPath = `M ${frontEdgeX} 30 Q ${frontCenterX} 90, ${frontEdgeX} 150 L ${backEdgeX} 150 Q ${backCenterX} 90, ${backEdgeX} 30 Z`;
+    centerLeftX = frontCenterX;
+    edgeRightX = backEdgeX;
+  }
+
+  const label = isPositive ? "Lente Positiva (Hipermetropia)" : "Lente Negativa (Miopia / Plano)";
+  
+  // Usamos CSS styles de transition no path e nas linhas para animar suavemente a mudança
   return (
     <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} className="drop-shadow-2xl">
       <defs>
         <linearGradient id="lensProfileGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="rgba(100, 210, 255, 0.3)" />
-          <stop offset="50%" stopColor="rgba(100, 210, 255, 0.1)" />
-          <stop offset="100%" stopColor="rgba(100, 210, 255, 0.3)" />
+          <stop offset="0%" stopColor="rgba(100, 210, 255, 0.5)" />
+          <stop offset="50%" stopColor="rgba(100, 210, 255, 0.2)" />
+          <stop offset="100%" stopColor="rgba(100, 210, 255, 0.5)" />
         </linearGradient>
       </defs>
       
       {/* Corpo da Lente */}
       <path 
-        d={`${frontPath} L ${back_edge_x} ${bottom_y} ${backPath} Z`} 
+        d={lensPath} 
         fill="url(#lensProfileGrad)"
-        stroke="rgba(255,255,255,0.4)"
+        stroke="rgba(255,255,255,0.6)"
         strokeWidth="1.5"
+        style={{ transition: 'all 0.4s ease-out' }}
       />
 
-      {/* Linhas de Cotação */}
-      <g opacity="0.6">
+      <text x={width/2} y={15} fill="var(--text-secondary)" fontSize="11" fontWeight="bold" textAnchor="middle" className="uppercase tracking-widest">
+        {label}
+      </text>
+
+      {/* Medidas */}
+      <g opacity="0.9" style={{ transition: 'all 0.4s ease-out' }}>
         {/* Espessura Central */}
-        <line x1={cx_front} y1={cy} x2={cx_back} y2={cy} stroke="var(--accent-primary)" strokeWidth="1" strokeDasharray="3 2" />
-        <text x={cx_back + 5} y={cy} fill="var(--accent-primary)" fontSize="9" fontWeight="bold" dominantBaseline="middle">CT: {results.ct.toFixed(1)}mm</text>
-        
-        {/* Espessura de Borda (no topo) */}
-        <line x1={front_edge_x} y1={top_y} x2={back_edge_x} y2={top_y} stroke="var(--accent-cyan)" strokeWidth="1.5" />
-        <text 
-          x={Math.max(front_edge_x, back_edge_x) + 5} y={top_y} 
-          fill="var(--accent-cyan)" fontSize="9" fontWeight="bold" dominantBaseline="middle"
-        >
-          ET: {((ct - s2 - s1)/scale).toFixed(1)}mm
+        <line x1={20} y1={90} x2={centerLeftX} y2={90} stroke="var(--accent-primary)" strokeWidth="1" strokeDasharray="3 3" />
+        <text x={15} y={90} fill="var(--accent-primary)" fontSize="11" fontWeight="bold" textAnchor="end" dominantBaseline="middle">
+          Centro: {results.ct.toFixed(1)}mm
+        </text>
+
+        {/* Espessura de Borda Máxima */}
+        <line x1={edgeRightX} y1={30} x2={340} y2={30} stroke="var(--accent-cyan)" strokeWidth="1" strokeDasharray="3 3" />
+        <text x={345} y={30} fill="var(--accent-cyan)" fontSize="11" fontWeight="bold" textAnchor="start" dominantBaseline="middle">
+          Borda: {results.maxThickness.toFixed(1)}mm
         </text>
       </g>
     </svg>
