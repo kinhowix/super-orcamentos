@@ -42,10 +42,36 @@ export default function NovoOrcamentoContato() {
   }, []);
 
   const handleReceitaChange = (eye, field, value) => {
+    const sanitizedValue = value.replace(',', '.');
     setReceita(prev => ({
       ...prev,
-      [eye]: { ...prev[eye], [field]: value }
+      [eye]: { ...prev[eye], [field]: sanitizedValue }
     }));
+  };
+
+  const handleReceitaBlur = (eye, field) => {
+    setReceita(prev => {
+      const val = prev[eye][field];
+      if (!val || val === '-' || val === '+') return prev;
+      
+      let str = String(val).replace(/\s/g, '');
+      let num = parseFloat(str);
+      if (isNaN(num)) return prev;
+
+      let formatted = val;
+      if (field === 'eixo') {
+        formatted = Math.round(num).toString();
+      } else {
+        formatted = num > 0 ? `+${num.toFixed(2)}` : num.toFixed(2);
+      }
+
+      if (prev[eye][field] === formatted) return prev;
+
+      return {
+        ...prev,
+        [eye]: { ...prev[eye], [field]: formatted }
+      };
+    });
   };
 
   // Convert prescription on the fly for UI transparency
@@ -294,20 +320,20 @@ export default function NovoOrcamentoContato() {
                 <div style={{ marginBottom: '16px' }}>
                   <label className="form-label" style={{ fontWeight: 600 }}>Olho Direito (OD)</label>
                   <div className="form-row" style={{ gridTemplateColumns: 'repeat(4, minmax(60px, 1fr))' }}>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Esférico</label><input className="form-input" type="number" step="0.25" placeholder="0.00" value={receita.od.esferico} onChange={e => handleReceitaChange('od', 'esferico', e.target.value)} /></div>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label><input className="form-input" type="number" step="0.25" placeholder="0.00" value={receita.od.cilindro} onChange={e => handleReceitaChange('od', 'cilindro', e.target.value)} /></div>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Eixo</label><input className="form-input" type="number" placeholder="0" value={receita.od.eixo} onChange={e => handleReceitaChange('od', 'eixo', e.target.value)} /></div>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Adição</label><input className="form-input" type="number" step="0.25" placeholder="0.00" value={receita.od.adicao} onChange={e => handleReceitaChange('od', 'adicao', e.target.value)} /></div>
+                    <div><label className="form-label" style={{ fontSize: '11px' }}>Esférico</label><input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.od.esferico} onChange={e => handleReceitaChange('od', 'esferico', e.target.value)} onBlur={() => handleReceitaBlur('od', 'esferico')} /></div>
+                    <div><label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label><input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.od.cilindro} onChange={e => handleReceitaChange('od', 'cilindro', e.target.value)} onBlur={() => handleReceitaBlur('od', 'cilindro')} /></div>
+                    <div><label className="form-label" style={{ fontSize: '11px' }}>Eixo</label><input className="form-input" type="text" inputMode="numeric" placeholder="0" value={receita.od.eixo} onChange={e => handleReceitaChange('od', 'eixo', e.target.value)} onBlur={() => handleReceitaBlur('od', 'eixo')} /></div>
+                    <div><label className="form-label" style={{ fontSize: '11px' }}>Adição</label><input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.od.adicao} onChange={e => handleReceitaChange('od', 'adicao', e.target.value)} onBlur={() => handleReceitaBlur('od', 'adicao')} /></div>
                   </div>
                 </div>
                 {/* OE Inputs */}
                 <div>
                   <label className="form-label" style={{ fontWeight: 600 }}>Olho Esquerdo (OE)</label>
                   <div className="form-row" style={{ gridTemplateColumns: 'repeat(4, minmax(60px, 1fr))' }}>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Esférico</label><input className="form-input" type="number" step="0.25" placeholder="0.00" value={receita.oe.esferico} onChange={e => handleReceitaChange('oe', 'esferico', e.target.value)} /></div>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label><input className="form-input" type="number" step="0.25" placeholder="0.00" value={receita.oe.cilindro} onChange={e => handleReceitaChange('oe', 'cilindro', e.target.value)} /></div>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Eixo</label><input className="form-input" type="number" placeholder="0" value={receita.oe.eixo} onChange={e => handleReceitaChange('oe', 'eixo', e.target.value)} /></div>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Adição</label><input className="form-input" type="number" step="0.25" placeholder="0.00" value={receita.oe.adicao} onChange={e => handleReceitaChange('oe', 'adicao', e.target.value)} /></div>
+                    <div><label className="form-label" style={{ fontSize: '11px' }}>Esférico</label><input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.oe.esferico} onChange={e => handleReceitaChange('oe', 'esferico', e.target.value)} onBlur={() => handleReceitaBlur('oe', 'esferico')} /></div>
+                    <div><label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label><input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.oe.cilindro} onChange={e => handleReceitaChange('oe', 'cilindro', e.target.value)} onBlur={() => handleReceitaBlur('oe', 'cilindro')} /></div>
+                    <div><label className="form-label" style={{ fontSize: '11px' }}>Eixo</label><input className="form-input" type="text" inputMode="numeric" placeholder="0" value={receita.oe.eixo} onChange={e => handleReceitaChange('oe', 'eixo', e.target.value)} onBlur={() => handleReceitaBlur('oe', 'eixo')} /></div>
+                    <div><label className="form-label" style={{ fontSize: '11px' }}>Adição</label><input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.oe.adicao} onChange={e => handleReceitaChange('oe', 'adicao', e.target.value)} onBlur={() => handleReceitaBlur('oe', 'adicao')} /></div>
                   </div>
                 </div>
               </div>
