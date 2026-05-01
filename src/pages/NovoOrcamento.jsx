@@ -31,7 +31,7 @@ export default function NovoOrcamento() {
   const [searchLente, setSearchLente] = useState('')
   const [activeItemIdx, setActiveItemIdx] = useState(0)
   const [showLenteSelector, setShowLenteSelector] = useState(false)
-  
+
   // OCR States
   const [ocrLoading, setOcrLoading] = useState(false)
   const [ocrProgress, setOcrProgress] = useState(0)
@@ -41,7 +41,7 @@ export default function NovoOrcamento() {
   const [parcelas, setParcelas] = useState(1)
   const [armacao, setArmacao] = useState({ referencia: '', preco: 0 })
   const [desconto, setDesconto] = useState(0)
-  
+
   // Selection Filters
   const [filterIndex, setFilterIndex] = useState('')
   const [filterFornecedor, setFilterFornecedor] = useState('')
@@ -123,10 +123,10 @@ export default function NovoOrcamento() {
           const checkGridEye = (esfVal, cilVal) => {
             const key = parseFloat(esfVal).toFixed(2)
             const gridRow = spec.grid[key]
-            
+
             // If sphere is NOT in grid, lens is incompatible
             if (!gridRow) return false
-            
+
             // Check specific cylinder limit for this sphere
             if (gridRow.maxCyl !== null && gridRow.maxCyl !== undefined) {
               const maxCyl = Math.abs(parseFloat(gridRow.maxCyl))
@@ -134,14 +134,14 @@ export default function NovoOrcamento() {
             }
             return true
           }
-          
+
           if (!checkGridEye(esfOD, cilOD) || !checkGridEye(esfOE, cilOE)) return false
         }
 
         // 2. Global Check spherical range
         const eMin = spec.esferico_min !== "" && spec.esferico_min !== null ? parseFloat(spec.esferico_min) : null
         const eMax = spec.esferico_max !== "" && spec.esferico_max !== null ? parseFloat(spec.esferico_max) : null
-        
+
         if (eMin !== null && eMax !== null) {
           const min = Math.min(eMin, eMax)
           const max = Math.max(eMin, eMax)
@@ -224,29 +224,29 @@ export default function NovoOrcamento() {
     // We want the options based on prescription compatibility ONLY, 
     // so the user can see what's available for their degree
     const compatibleWithDegree = lentes.filter(l => {
-        // Simple version of getCompatibleLenses logic just for degree
-        const esfOD = parseFloat(receita.od.esferico) || 0
-        const esfOE = parseFloat(receita.oe.esferico) || 0
-        const cilOD = Math.abs(parseFloat(receita.od.cilindro) || 0)
-        const cilOE = Math.abs(parseFloat(receita.oe.cilindro) || 0)
-        const ad = Math.max(Math.abs(parseFloat(receita.od.adicao)||0), Math.abs(parseFloat(receita.oe.adicao)||0))
-        
-        if (ad === 0 && l.tipo === 'multifocal') return false
-        if (ad > 0 && l.tipo !== 'multifocal') return false
+      // Simple version of getCompatibleLenses logic just for degree
+      const esfOD = parseFloat(receita.od.esferico) || 0
+      const esfOE = parseFloat(receita.oe.esferico) || 0
+      const cilOD = Math.abs(parseFloat(receita.od.cilindro) || 0)
+      const cilOE = Math.abs(parseFloat(receita.oe.cilindro) || 0)
+      const ad = Math.max(Math.abs(parseFloat(receita.od.adicao) || 0), Math.abs(parseFloat(receita.oe.adicao) || 0))
 
-        const spec = l.especificacoes
-        if (!spec) return true
+      if (ad === 0 && l.tipo === 'multifocal') return false
+      if (ad > 0 && l.tipo !== 'multifocal') return false
 
-        if (spec.useGrid && spec.grid) {
-            const checkGrid = (esf, cil) => {
-                const row = spec.grid[parseFloat(esf).toFixed(2)]
-                if (!row) return false
-                if (row.maxCyl != null && cil > Math.abs(parseFloat(row.maxCyl))) return false
-                return true
-            }
-            if (!checkGrid(esfOD, cilOD) || !checkGrid(esfOE, cilOE)) return false
+      const spec = l.especificacoes
+      if (!spec) return true
+
+      if (spec.useGrid && spec.grid) {
+        const checkGrid = (esf, cil) => {
+          const row = spec.grid[parseFloat(esf).toFixed(2)]
+          if (!row) return false
+          if (row.maxCyl != null && cil > Math.abs(parseFloat(row.maxCyl))) return false
+          return true
         }
-        return true
+        if (!checkGrid(esfOD, cilOD) || !checkGrid(esfOE, cilOE)) return false
+      }
+      return true
     })
 
     return {
@@ -314,7 +314,7 @@ export default function NovoOrcamento() {
     setReceita(prev => {
       const val = prev[eye][field]
       if (!val || val === '-' || val === '+') return prev
-      
+
       let str = String(val).replace(/\s/g, '')
       let num = parseFloat(str)
       if (isNaN(num)) return prev
@@ -354,7 +354,7 @@ export default function NovoOrcamento() {
     if (!value) return ''
     // Remove tudo que não é dígito
     const digits = value.replace(/\D/g, '').substring(0, 11)
-    
+
     // Aplica a máscara
     if (digits.length <= 2) return digits
     if (digits.length <= 7) return `(${digits.substring(0, 2)}) ${digits.substring(2)}`
@@ -382,7 +382,7 @@ export default function NovoOrcamento() {
       const text = await extractTextFromImage(file, (progress) => {
         setOcrProgress(progress)
       })
-      
+
       const parsed = parsePrescriptionText(text)
       setOcrResult(parsed)
       setShowOcrConfirm(true)
@@ -461,7 +461,7 @@ export default function NovoOrcamento() {
       msg += `OD: ${receita.od.esferico || '0.00'}/${receita.od.cilindro || '0.00'} Eixo: ${receita.od.eixo || '0'}° Add: ${receita.od.adicao || '0.00'}\n`
       msg += `OE: ${receita.oe.esferico || '0.00'}/${receita.oe.cilindro || '0.00'} Eixo: ${receita.oe.eixo || '0'}° Add: ${receita.oe.adicao || '0.00'}\n`
     }
-    
+
     msg += `\n`
 
     itens.forEach((item, idx) => {
@@ -477,7 +477,7 @@ export default function NovoOrcamento() {
 
     msg += `━━━━━━━━━━━━━━━━━━\n`
     msg += `*💰 Total: ${formatCurrency(total)}*\n`
-    
+
     if (parcelas > 1) {
       msg += `*💳 Pagamento:* ${parcelas}x de ${formatCurrency(total / parcelas)} sem juros\n`
     } else {
@@ -558,7 +558,7 @@ export default function NovoOrcamento() {
                 />
               </label>
             </div>
-            
+
             <div style={{ marginBottom: '16px' }}>
               <label className="form-label" style={{ fontWeight: 600 }}>Olho Direito (OD)</label>
               <div className="form-row" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
@@ -845,12 +845,12 @@ export default function NovoOrcamento() {
 
             <div className="form-group">
               <label className="form-label">Condições de Pagamento</label>
-              <select 
+              <select
                 className="form-select"
                 value={parcelas}
                 onChange={e => setParcelas(parseInt(e.target.value))}
               >
-                {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
                   <option key={n} value={n}>
                     {n === 1 ? 'À vista' : `${n}x sem juros`}
                   </option>
@@ -906,10 +906,10 @@ export default function NovoOrcamento() {
               />
             </div>
 
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
-              gap: '12px', 
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+              gap: '12px',
               marginBottom: '20px',
               padding: '16px',
               background: 'rgba(255, 255, 255, 0.03)', /* Sub-glass effect */
@@ -919,11 +919,11 @@ export default function NovoOrcamento() {
             }}>
               <div>
                 <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Índice</label>
-                <select 
-                   className="form-select" 
-                   style={{ padding: '8px 12px', fontSize: '13px', background: 'rgba(0, 0, 0, 0.2)' }}
-                   value={filterIndex}
-                   onChange={e => setFilterIndex(e.target.value)}
+                <select
+                  className="form-select"
+                  style={{ padding: '8px 12px', fontSize: '13px', background: 'rgba(0, 0, 0, 0.2)' }}
+                  value={filterIndex}
+                  onChange={e => setFilterIndex(e.target.value)}
                 >
                   <option value="">Todos</option>
                   {filterOptions.indices.map(idx => <option key={idx} value={idx}>{idx}</option>)}
@@ -932,11 +932,11 @@ export default function NovoOrcamento() {
 
               <div>
                 <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Marca/Fornecedor</label>
-                <select 
-                   className="form-select" 
-                   style={{ padding: '8px 12px', fontSize: '13px', background: 'rgba(0, 0, 0, 0.2)' }}
-                   value={filterFornecedor}
-                   onChange={e => setFilterFornecedor(e.target.value)}
+                <select
+                  className="form-select"
+                  style={{ padding: '8px 12px', fontSize: '13px', background: 'rgba(0, 0, 0, 0.2)' }}
+                  value={filterFornecedor}
+                  onChange={e => setFilterFornecedor(e.target.value)}
                 >
                   <option value="">Todas</option>
                   {filterOptions.fornecedores.map(f => <option key={f} value={f}>{f}</option>)}
@@ -945,30 +945,30 @@ export default function NovoOrcamento() {
 
               <div>
                 <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Preço Máximo</label>
-                <input 
-                   type="number"
-                   className="form-input" 
-                   style={{ padding: '8px 12px', fontSize: '13px', background: 'rgba(0, 0, 0, 0.2)' }}
-                   placeholder="Até R$..."
-                   value={filterPrecoMax}
-                   onChange={e => setFilterPrecoMax(e.target.value)}
+                <input
+                  type="number"
+                  className="form-input"
+                  style={{ padding: '8px 12px', fontSize: '13px', background: 'rgba(0, 0, 0, 0.2)' }}
+                  placeholder="Até R$..."
+                  value={filterPrecoMax}
+                  onChange={e => setFilterPrecoMax(e.target.value)}
                 />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setFilterFotossensivel(!filterFotossensivel)}>
-                  <input type="checkbox" checked={filterFotossensivel} onChange={() => {}} style={{ width: '16px', height: '16px', pointerEvents: 'none' }} />
+                  <input type="checkbox" checked={filterFotossensivel} onChange={() => { }} style={{ width: '16px', height: '16px', pointerEvents: 'none' }} />
                   <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>Fotossensível</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setFilterFiltroAzul(!filterFiltroAzul)}>
-                  <input type="checkbox" checked={filterFiltroAzul} onChange={() => {}} style={{ width: '16px', height: '16px', pointerEvents: 'none' }} />
+                  <input type="checkbox" checked={filterFiltroAzul} onChange={() => { }} style={{ width: '16px', height: '16px', pointerEvents: 'none' }} />
                   <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>Filtro Azul</span>
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                <button 
-                  className="btn btn-secondary" 
+                <button
+                  className="btn btn-secondary"
                   style={{ width: '100%', padding: '8px', fontSize: '12px', height: '38px', borderRadius: 'var(--radius-sm)' }}
                   onClick={clearFilters}
                 >
@@ -993,16 +993,16 @@ export default function NovoOrcamento() {
                     color: 'var(--text-secondary)',
                   }}>
                     <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {group.nome}
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            {group.lentes.some(l => l.especificacoes?.fotossensivel) && (
-                              <span title="Fotossensível" style={{ fontSize: '10px', background: 'var(--accent-amber-bg)', color: 'var(--accent-amber)', padding: '2px 6px', borderRadius: '4px' }}>🌟 Foto</span>
-                            )}
-                            {group.lentes.some(l => l.especificacoes?.filtroAzul) && (
-                              <span title="Filtro Azul" style={{ fontSize: '10px', background: 'var(--accent-primary-bg)', color: 'var(--accent-primary-hover)', padding: '2px 6px', borderRadius: '4px' }}>🔵 Azul</span>
-                            )}
-                          </div>
-                        </div>
+                      {group.nome}
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {group.lentes.some(l => l.especificacoes?.fotossensivel) && (
+                          <span title="Fotossensível" style={{ fontSize: '10px', background: 'var(--accent-amber-bg)', color: 'var(--accent-amber)', padding: '2px 6px', borderRadius: '4px' }}>🌟 Foto</span>
+                        )}
+                        {group.lentes.some(l => l.especificacoes?.filtroAzul) && (
+                          <span title="Filtro Azul" style={{ fontSize: '10px', background: 'var(--accent-primary-bg)', color: 'var(--accent-primary-hover)', padding: '2px 6px', borderRadius: '4px' }}>🔵 Azul</span>
+                        )}
+                      </div>
+                    </div>
                     <span className={`badge ${group.tipo === 'multifocal' ? 'badge-purple' : 'badge-cyan'}`}
                       style={{ marginLeft: '8px' }}>
                       {group.tipo === 'multifocal' ? 'Multi' : 'VS'}
@@ -1100,57 +1100,57 @@ export default function NovoOrcamento() {
 
               <div className="ocr-result-row">
                 <div className="ocr-result-eye">Esférico</div>
-                <input 
-                  className="ocr-result-input" 
-                  value={ocrResult?.od.esferico} 
-                  onChange={e => setOcrResult(prev => ({...prev, od: {...prev.od, esferico: e.target.value}}))}
+                <input
+                  className="ocr-result-input"
+                  value={ocrResult?.od.esferico}
+                  onChange={e => setOcrResult(prev => ({ ...prev, od: { ...prev.od, esferico: e.target.value } }))}
                 />
-                <input 
-                  className="ocr-result-input" 
-                  value={ocrResult?.oe.esferico} 
-                  onChange={e => setOcrResult(prev => ({...prev, oe: {...prev.oe, esferico: e.target.value}}))}
+                <input
+                  className="ocr-result-input"
+                  value={ocrResult?.oe.esferico}
+                  onChange={e => setOcrResult(prev => ({ ...prev, oe: { ...prev.oe, esferico: e.target.value } }))}
                 />
               </div>
 
               <div className="ocr-result-row">
                 <div className="ocr-result-eye">Cilíndrico</div>
-                <input 
-                  className="ocr-result-input" 
-                  value={ocrResult?.od.cilindro} 
-                  onChange={e => setOcrResult(prev => ({...prev, od: {...prev.od, cilindro: e.target.value}}))}
+                <input
+                  className="ocr-result-input"
+                  value={ocrResult?.od.cilindro}
+                  onChange={e => setOcrResult(prev => ({ ...prev, od: { ...prev.od, cilindro: e.target.value } }))}
                 />
-                <input 
-                  className="ocr-result-input" 
-                  value={ocrResult?.oe.cilindro} 
-                  onChange={e => setOcrResult(prev => ({...prev, oe: {...prev.oe, cilindro: e.target.value}}))}
+                <input
+                  className="ocr-result-input"
+                  value={ocrResult?.oe.cilindro}
+                  onChange={e => setOcrResult(prev => ({ ...prev, oe: { ...prev.oe, cilindro: e.target.value } }))}
                 />
               </div>
 
               <div className="ocr-result-row">
                 <div className="ocr-result-eye">Eixo</div>
-                <input 
-                  className="ocr-result-input" 
-                  value={ocrResult?.od.eixo} 
-                  onChange={e => setOcrResult(prev => ({...prev, od: {...prev.od, eixo: e.target.value}}))}
+                <input
+                  className="ocr-result-input"
+                  value={ocrResult?.od.eixo}
+                  onChange={e => setOcrResult(prev => ({ ...prev, od: { ...prev.od, eixo: e.target.value } }))}
                 />
-                <input 
-                  className="ocr-result-input" 
-                  value={ocrResult?.oe.eixo} 
-                  onChange={e => setOcrResult(prev => ({...prev, oe: {...prev.oe, eixo: e.target.value}}))}
+                <input
+                  className="ocr-result-input"
+                  value={ocrResult?.oe.eixo}
+                  onChange={e => setOcrResult(prev => ({ ...prev, oe: { ...prev.oe, eixo: e.target.value } }))}
                 />
               </div>
 
               <div className="ocr-result-row">
                 <div className="ocr-result-eye">Adição</div>
-                <input 
-                  className="ocr-result-input" 
-                  value={ocrResult?.od.adicao} 
-                  onChange={e => setOcrResult(prev => ({...prev, od: {...prev.od, adicao: e.target.value}}))}
+                <input
+                  className="ocr-result-input"
+                  value={ocrResult?.od.adicao}
+                  onChange={e => setOcrResult(prev => ({ ...prev, od: { ...prev.od, adicao: e.target.value } }))}
                 />
-                <input 
-                  className="ocr-result-input" 
-                  value={ocrResult?.oe.adicao} 
-                  onChange={e => setOcrResult(prev => ({...prev, oe: {...prev.oe, adicao: e.target.value}}))}
+                <input
+                  className="ocr-result-input"
+                  value={ocrResult?.oe.adicao}
+                  onChange={e => setOcrResult(prev => ({ ...prev, oe: { ...prev.oe, adicao: e.target.value } }))}
                 />
               </div>
             </div>

@@ -18,7 +18,7 @@ export default function NovoOrcamentoContato() {
   const [lentes, setLentes] = useState([]);
   const [cliente, setCliente] = useState({ nome: '', telefone: '' });
   const [tipoReceita, setTipoReceita] = useState('oculos'); // oculos | contato
-  
+
   const [receita, setReceita] = useState({
     od: { esferico: '', cilindro: '', eixo: '', adicao: '' },
     oe: { esferico: '', cilindro: '', eixo: '', adicao: '' },
@@ -26,7 +26,7 @@ export default function NovoOrcamentoContato() {
 
   const [itens, setItens] = useState([{ ...EMPTY_ITEM }]);
   const [observacoes, setObservacoes] = useState('');
-  
+
   const [searchLente, setSearchLente] = useState('');
   const [activeItemIdx, setActiveItemIdx] = useState(0);
   const [showLenteSelector, setShowLenteSelector] = useState(false);
@@ -53,7 +53,7 @@ export default function NovoOrcamentoContato() {
     setReceita(prev => {
       const val = prev[eye][field];
       if (!val || val === '-' || val === '+') return prev;
-      
+
       let str = String(val).replace(/\s/g, '');
       let num = parseFloat(str);
       if (isNaN(num)) return prev;
@@ -109,17 +109,17 @@ export default function NovoOrcamentoContato() {
 
     // Smart filtering based on drawing (Desenho)
     if (hasAddition && hasAstigmatism) {
-       result = result.filter(l => l.desenho === 'Tórico Multifocal');
+      result = result.filter(l => l.desenho === 'Tórico Multifocal');
     } else if (hasAddition) {
-       result = result.filter(l => l.desenho === 'Multifocal' || l.desenho === 'Tórico Multifocal');
+      result = result.filter(l => l.desenho === 'Multifocal' || l.desenho === 'Tórico Multifocal');
     } else if (hasAstigmatism) {
-       result = result.filter(l => l.desenho === 'Tórico' || l.desenho === 'Tórico Multifocal');
+      result = result.filter(l => l.desenho === 'Tórico' || l.desenho === 'Tórico Multifocal');
     } else {
-       result = result.filter(l => l.desenho === 'Asférico' || l.desenho === 'Esférico' || l.desenho === 'Tórico');
+      result = result.filter(l => l.desenho === 'Asférico' || l.desenho === 'Esférico' || l.desenho === 'Tórico');
     }
 
-    const grausIdenticos = 
-      esfOD === esfOE && 
+    const grausIdenticos =
+      esfOD === esfOE &&
       (parseFloat(receitaConvertida.od.cilindro) || 0) === (parseFloat(receitaConvertida.oe.cilindro) || 0) &&
       (parseFloat(receitaConvertida.od.eixo) || 0) === (parseFloat(receitaConvertida.oe.eixo) || 0) &&
       (parseFloat(receitaConvertida.od.adicao) || 0) === (parseFloat(receitaConvertida.oe.adicao) || 0);
@@ -131,12 +131,12 @@ export default function NovoOrcamentoContato() {
         let note = null;
 
         if (esf === 0) {
-            fits = l.plano_disponivel === 'Sim';
-            return { fits, note };
+          fits = l.plano_disponivel === 'Sim';
+          return { fits, note };
         }
-        
+
         const absEsf = Math.abs(esf);
-        
+
         const checkBounds = (val) => {
           if (val < 0) {
             const mMin = parseFloat(l.miopia_min);
@@ -157,15 +157,15 @@ export default function NovoOrcamentoContato() {
         // Check 0.50 step rule
         if (fits && l.passos_050 === 'Sim' && absEsf > 6.00) {
           if (absEsf % 0.50 !== 0) {
-             const suggestedEsf = Math.ceil(esf / 0.50) * 0.50;
-             if (checkBounds(suggestedEsf)) {
-                 note = `Grau sugerido aproximado: ${suggestedEsf > 0 ? '+' : ''}${suggestedEsf.toFixed(2)}`;
-             } else {
-                 fits = false;
-             }
+            const suggestedEsf = Math.ceil(esf / 0.50) * 0.50;
+            if (checkBounds(suggestedEsf)) {
+              note = `Grau sugerido aproximado: ${suggestedEsf > 0 ? '+' : ''}${suggestedEsf.toFixed(2)}`;
+            } else {
+              fits = false;
+            }
           }
         }
-        
+
         return { fits, note };
       };
 
@@ -178,14 +178,14 @@ export default function NovoOrcamentoContato() {
       if (resultOD.fits && !resultOE.fits) compatibilidade = 'Apenas OD';
       if (!resultOD.fits && resultOE.fits) compatibilidade = 'Apenas OE';
 
-      return { 
-        ...l, 
-        fitsOD: resultOD.fits, 
-        fitsOE: resultOE.fits, 
+      return {
+        ...l,
+        fitsOD: resultOD.fits,
+        fitsOE: resultOE.fits,
         noteOD: resultOD.note,
         noteOE: resultOE.note,
-        compatibilidade, 
-        grausIdenticos 
+        compatibilidade,
+        grausIdenticos
       };
     }).filter(Boolean);
 
@@ -195,13 +195,13 @@ export default function NovoOrcamentoContato() {
   const handleSelectLente = (lente) => {
     setItens(prev => {
       const updated = [...prev];
-      
+
       let qtdOD = lente.fitsOD ? 1 : 0;
       let qtdOE = lente.fitsOE ? 1 : 0;
 
       if (lente.grausIdenticos && lente.fitsOD && lente.fitsOE) {
-         qtdOD = 1;
-         qtdOE = 0;
+        qtdOD = 1;
+        qtdOE = 0;
       }
 
       updated[activeItemIdx] = {
@@ -282,7 +282,7 @@ export default function NovoOrcamentoContato() {
 
       <div className="orcamento-layout">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
+
           {/* Dados Cliente */}
           <div className="card">
             <div className="card-header">
@@ -343,7 +343,7 @@ export default function NovoOrcamentoContato() {
                 <div style={{ padding: '16px', background: 'var(--accent-primary-bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-primary)' }}>
                   <h4 style={{ fontSize: '14px', marginBottom: '8px', color: 'var(--accent-primary)' }}>✨ Grau Convertido (Lente de Contato)</h4>
                   <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Distância ao vértice calculada (12mm).</p>
-                  
+
                   <div style={{ marginBottom: '16px' }}>
                     <div style={{ fontWeight: 600, fontSize: '12px', marginBottom: '4px' }}>OD (Direito)</div>
                     <div style={{ display: 'flex', gap: '8px', fontWeight: 600 }}>
@@ -376,7 +376,7 @@ export default function NovoOrcamentoContato() {
                   </button>
                 )}
               </div>
-              
+
               <div style={{ marginBottom: '16px' }}>
                 <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => { setActiveItemIdx(idx); setShowLenteSelector(true); }}>
                   <Search size={16} /> {item.modelo ? `${item.marca} - ${item.modelo}` : 'Selecionar Lente de Contato'}
@@ -423,7 +423,7 @@ export default function NovoOrcamentoContato() {
                 <span style={{ fontWeight: 600 }}>{formatCurrency(calculateItemTotal(item))}</span>
               </div>
             ))}
-            
+
             <div style={{ marginTop: '16px' }}>
               <label className="form-label" style={{ fontSize: '12px', marginBottom: '4px' }}>Desconto (R$)</label>
               <input className="form-input" type="number" step="0.01" value={desconto} onChange={e => setDesconto(parseFloat(e.target.value) || 0)} />
