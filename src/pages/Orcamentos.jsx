@@ -66,13 +66,15 @@ export default function Orcamentos() {
     msg += `━━━━━━━━━━━━━━━━━━\n`
     msg += `*Cliente:* ${orc.cliente?.nome}\n`
 
-    const rec = orc.receita || (orc.itens?.[0]?.olhoDireito ? {
-      od: orc.itens[0].olhoDireito,
-      oe: orc.itens[0].olhoEsquerdo
-    } : null);
+    const rec = orc.tipo === 'contato' 
+      ? (orc.receitaOriginal || orc.receita) 
+      : (orc.receita || (orc.itens?.[0]?.olhoDireito ? {
+          od: orc.itens[0].olhoDireito,
+          oe: orc.itens[0].olhoEsquerdo
+        } : null));
 
     if (rec) {
-      msg += `\n*Receita:* \n`
+      msg += `\n*Receita ${orc.tipo === 'contato' && orc.tipoReceitaOriginal === 'oculos' ? '(Óculos, com conversão de vértice aplicada)' : ''}:* \n`
       msg += `OD: ${rec.od?.esferico || '0.00'}/${rec.od?.cilindro || '0.00'} Eixo: ${rec.od?.eixo || '0'}° Add: ${rec.od?.adicao || '0.00'}\n`
       msg += `OE: ${rec.oe?.esferico || '0.00'}/${rec.oe?.cilindro || '0.00'} Eixo: ${rec.oe?.eixo || '0'}° Add: ${rec.oe?.adicao || '0.00'}\n`
     }
@@ -80,9 +82,17 @@ export default function Orcamentos() {
     msg += `\n`
 
     orc.itens?.forEach((item, idx) => {
-      if (item.lenteName) {
-        msg += `*📌 Opção ${idx + 1}:* ${item.lenteName}\n`
-        msg += `   Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n\n`
+      if (orc.tipo === 'contato') {
+        if (item.modelo) {
+          msg += `*📌 Opção ${idx + 1}:* ${item.marca} - ${item.modelo}\n`
+          msg += `   Qtd. Caixas: OD: ${item.qtdCaixasOD || 0} | OE: ${item.qtdCaixasOE || 0}\n`
+          msg += `   Valor: ${formatCurrency(item.total)}\n\n`
+        }
+      } else {
+        if (item.lenteName) {
+          msg += `*📌 Opção ${idx + 1}:* ${item.lenteName}\n`
+          msg += `   Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n\n`
+        }
       }
     })
 
@@ -340,10 +350,12 @@ export default function Orcamentos() {
 
             {/* Prescription Display */}
             {(() => {
-              const rec = selectedOrc.receita || (selectedOrc.itens?.[0]?.olhoDireito ? {
-                od: selectedOrc.itens[0].olhoDireito,
-                oe: selectedOrc.itens[0].olhoEsquerdo
-              } : null);
+              const rec = selectedOrc.tipo === 'contato' 
+                ? (selectedOrc.receitaOriginal || selectedOrc.receita)
+                : (selectedOrc.receita || (selectedOrc.itens?.[0]?.olhoDireito ? {
+                    od: selectedOrc.itens[0].olhoDireito,
+                    oe: selectedOrc.itens[0].olhoEsquerdo
+                  } : null));
 
               if (!rec) return null;
 
@@ -396,19 +408,30 @@ export default function Orcamentos() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <span style={{ fontWeight: 600 }}>Opção {idx + 1}</span>
                   <span style={{ fontWeight: 700, color: 'var(--accent-green)' }}>
-                    {formatCurrency(item.preco || 0)}
+                    {formatCurrency(item.preco || item.total || 0)}
                   </span>
                 </div>
                 <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                  <div>{item.lenteName || 'Lente não selecionada'}</div>
-                  {item.antirreflexo && (
-                    <div>AR: {getAntiReflexoLabel(item.antirreflexo)}</div>
+                  {selectedOrc.tipo === 'contato' ? (
+                    <>
+                      <div>{item.marca} - {item.modelo}</div>
+                      <div style={{ marginTop: '4px', fontSize: '13px' }}>
+                        OD: {item.qtdCaixasOD || 0} cx | OE: {item.qtdCaixasOE || 0} cx
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>{item.lenteName || 'Lente não selecionada'}</div>
+                      {item.antirreflexo && (
+                        <div>AR: {getAntiReflexoLabel(item.antirreflexo)}</div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
             ))}
 
-            {selectedOrc.armacao && (selectedOrc.armacao.referencia || selectedOrc.armacao.preco > 0) && (
+            {selectedOrc.tipo !== 'contato' && selectedOrc.armacao && (selectedOrc.armacao.referencia || selectedOrc.armacao.preco > 0) && (
               <div style={{
                 padding: '16px',
                 background: 'rgba(255,255,255,0.02)',

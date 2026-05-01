@@ -11,6 +11,10 @@ import Orcamentos from './pages/Orcamentos'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Migracao from './pages/Migracao'
+import CalculadoraBordas from './pages/CalculadoraBordas'
+import CadastroLentesContato from './pages/CadastroLentesContato'
+import NovoOrcamentoContato from './pages/NovoOrcamentoContato'
+import CatalogoContato from './pages/CatalogoContato'
 
 import { Menu, LogOut } from 'lucide-react'
 
@@ -68,6 +72,10 @@ function MainLayout() {
             <Route path="/novo-orcamento" element={<NovoOrcamento />} />
             <Route path="/orcamentos" element={<Orcamentos />} />
             <Route path="/migracao" element={<Migracao />} />
+            <Route path="/calculadora-bordas" element={<CalculadoraBordas />} />
+            <Route path="/cadastro-lentes-contato" element={<CadastroLentesContato />} />
+            <Route path="/catalogo-contato" element={<CatalogoContato />} />
+            <Route path="/novo-orcamento-contato" element={<NovoOrcamentoContato />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </div>

@@ -6,6 +6,8 @@ const COLLECTIONS = {
   ORCAMENTOS: 'orcamentos',
   FORNECEDORES: 'fornecedores',
   NIVEIS_AR_FORNECEDOR: 'niveis_ar_fornecedor',
+  LENTES_CONTATO: 'lentes_contato',
+  MARCAS_CONTATO: 'marcas_contato',
 };
 
 // ========== LENTES ==========
@@ -50,6 +52,39 @@ export async function deleteLente(id) {
   const ref = doc(db, COLLECTIONS.LENTES, id);
   await deleteDoc(ref);
 }
+
+// ========== LENTES DE CONTATO ==========
+export async function getLentesContato() {
+  const snapshot = await getDocs(collection(db, COLLECTIONS.LENTES_CONTATO));
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+export async function getLenteContatoById(id) {
+  const all = await getLentesContato();
+  return all.find(l => l.id === id);
+}
+
+export async function saveLenteContato(lente) {
+  if (lente.id) {
+    const ref = doc(db, COLLECTIONS.LENTES_CONTATO, lente.id);
+    await updateDoc(ref, { ...lente, updatedAt: new Date().toISOString() });
+    return lente;
+  } else {
+    const dataToSave = {
+      ...lente,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    const docRef = await addDoc(collection(db, COLLECTIONS.LENTES_CONTATO), dataToSave);
+    return { ...dataToSave, id: docRef.id };
+  }
+}
+
+export async function deleteLenteContato(id) {
+  const ref = doc(db, COLLECTIONS.LENTES_CONTATO, id);
+  await deleteDoc(ref);
+}
+
 
 // ========== ORÇAMENTOS ==========
 export async function getOrcamentos() {
@@ -102,6 +137,30 @@ export async function addFornecedor(nome) {
   const current = await getFornecedores();
   if (!current.includes(nome)) {
     await addDoc(collection(db, COLLECTIONS.FORNECEDORES), { nome });
+    current.push(nome);
+  }
+  return current;
+}
+
+// ========== MARCAS LENTES CONTATO ==========
+export async function getMarcasContato() {
+  const snapshot = await getDocs(collection(db, COLLECTIONS.MARCAS_CONTATO));
+  const saved = snapshot.docs.map(doc => doc.data().nome);
+  
+  if (saved.length === 0) {
+    const defaultMarcas = ['CooperVision', 'Bausch + Lomb', 'Johnson & Johnson', 'Alcon', 'Solótica'];
+    for (const nome of defaultMarcas) {
+      await addDoc(collection(db, COLLECTIONS.MARCAS_CONTATO), { nome });
+    }
+    return defaultMarcas;
+  }
+  return saved;
+}
+
+export async function addMarcaContato(nome) {
+  const current = await getMarcasContato();
+  if (!current.includes(nome)) {
+    await addDoc(collection(db, COLLECTIONS.MARCAS_CONTATO), { nome });
     current.push(nome);
   }
   return current;
