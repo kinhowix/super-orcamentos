@@ -92,40 +92,76 @@ export default function NovoOrcamentoContato() {
        result = result.filter(l => l.desenho === 'Asférico' || l.desenho === 'Esférico' || l.desenho === 'Tórico');
     }
 
+    const grausIdenticos = 
+      esfOD === esfOE && 
+      (parseFloat(receitaConvertida.od.cilindro) || 0) === (parseFloat(receitaConvertida.oe.cilindro) || 0) &&
+      (parseFloat(receitaConvertida.od.eixo) || 0) === (parseFloat(receitaConvertida.oe.eixo) || 0) &&
+      (parseFloat(receitaConvertida.od.adicao) || 0) === (parseFloat(receitaConvertida.oe.adicao) || 0);
+
     // Filter by spherical bounds
-    result = result.filter(l => {
+    result = result.map(l => {
       const checkSpherical = (esf) => {
-        if (esf === 0) return l.plano_disponivel === 'Sim';
+        let fits = true;
+        let note = null;
+
+        if (esf === 0) {
+            fits = l.plano_disponivel === 'Sim';
+            return { fits, note };
+        }
         
         const absEsf = Math.abs(esf);
         
-        if (esf < 0) {
-          const mMin = parseFloat(l.miopia_min);
-          const mMax = parseFloat(l.miopia_max);
-          // For myopia: -0.25 is "min", -12.00 is "max"
-          // We check if esf is between these two bounds.
-          // Note: esf is negative. e.g. -10 <= -0.25 and -10 >= -12.00
-          if (!isNaN(mMin) && esf > mMin) return false;
-          if (!isNaN(mMax) && esf < mMax) return false;
-        } else {
-          const hMin = parseFloat(l.hiper_min);
-          const hMax = parseFloat(l.hiper_max);
-          if (!isNaN(hMin) && esf < hMin) return false;
-          if (!isNaN(hMax) && esf > hMax) return false;
-        }
+        const checkBounds = (val) => {
+          if (val < 0) {
+            const mMin = parseFloat(l.miopia_min);
+            const mMax = parseFloat(l.miopia_max);
+            if (!isNaN(mMin) && val > mMin) return false;
+            if (!isNaN(mMax) && val < mMax) return false;
+          } else {
+            const hMin = parseFloat(l.hiper_min);
+            const hMax = parseFloat(l.hiper_max);
+            if (!isNaN(hMin) && val < hMin) return false;
+            if (!isNaN(hMax) && val > hMax) return false;
+          }
+          return true;
+        };
+
+        fits = checkBounds(esf);
 
         // Check 0.50 step rule
-        if (l.passos_050 === 'Sim' && absEsf > 6.00) {
-          if (absEsf % 0.50 !== 0) return false;
+        if (fits && l.passos_050 === 'Sim' && absEsf > 6.00) {
+          if (absEsf % 0.50 !== 0) {
+             const suggestedEsf = Math.ceil(esf / 0.50) * 0.50;
+             if (checkBounds(suggestedEsf)) {
+                 note = `Grau sugerido aproximado: ${suggestedEsf > 0 ? '+' : ''}${suggestedEsf.toFixed(2)}`;
+             } else {
+                 fits = false;
+             }
+          }
         }
-        return true;
+        
+        return { fits, note };
       };
 
-      if (!checkSpherical(esfOD)) return false;
-      if (!checkSpherical(esfOE)) return false;
+      const resultOD = checkSpherical(esfOD);
+      const resultOE = checkSpherical(esfOE);
 
-      return true;
-    });
+      if (!resultOD.fits && !resultOE.fits) return null;
+
+      let compatibilidade = 'Ambos';
+      if (resultOD.fits && !resultOE.fits) compatibilidade = 'Apenas OD';
+      if (!resultOD.fits && resultOE.fits) compatibilidade = 'Apenas OE';
+
+      return { 
+        ...l, 
+        fitsOD: resultOD.fits, 
+        fitsOE: resultOE.fits, 
+        noteOD: resultOD.note,
+        noteOE: resultOE.note,
+        compatibilidade, 
+        grausIdenticos 
+      };
+    }).filter(Boolean);
 
     return result;
   };
@@ -133,14 +169,23 @@ export default function NovoOrcamentoContato() {
   const handleSelectLente = (lente) => {
     setItens(prev => {
       const updated = [...prev];
+      
+      let qtdOD = lente.fitsOD ? 1 : 0;
+      let qtdOE = lente.fitsOE ? 1 : 0;
+
+      if (lente.grausIdenticos && lente.fitsOD && lente.fitsOE) {
+         qtdOD = 1;
+         qtdOE = 0;
+      }
+
       updated[activeItemIdx] = {
         ...updated[activeItemIdx],
         lenteId: lente.id,
         marca: lente.marca,
         modelo: lente.modelo,
         precoCaixa: lente.precoCaixa,
-        qtdCaixasOD: 1,
-        qtdCaixasOE: 1
+        qtdCaixasOD: qtdOD,
+        qtdCaixasOE: qtdOE
       };
       return updated;
     });
@@ -385,12 +430,26 @@ export default function NovoOrcamentoContato() {
               {getCompatibleLenses().map(lente => (
                 <div key={lente.id} className="lente-item" onClick={() => handleSelectLente(lente)} style={{ padding: '12px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
                   <div>
-                    <div style={{ fontWeight: 600 }}>{lente.marca} - {lente.modelo}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span>{lente.marca} - {lente.modelo}</span>
+                      {lente.compatibilidade === 'Apenas OD' && <span className="badge badge-blue">Apenas OD</span>}
+                      {lente.compatibilidade === 'Apenas OE' && <span className="badge badge-purple">Apenas OE</span>}
+                      {lente.compatibilidade === 'Ambos' && !lente.grausIdenticos && <span className="badge badge-green">Serve para ambos</span>}
+                      {lente.compatibilidade === 'Ambos' && lente.grausIdenticos && <span className="badge badge-amber" title="Como os graus são iguais, 1 caixa pode servir para ambos">Graus Idênticos (1 cx serve ambos)</span>}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
                       {lente.desenho} • Descarte: {lente.descarte} • {lente.embalagem} unid/caixa
                     </div>
+                    {(lente.noteOD || lente.noteOE) && (
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '4px' }}>
+                        {lente.noteOD && <div>OD: {lente.noteOD}</div>}
+                        {lente.noteOE && <div>OE: {lente.noteOE}</div>}
+                      </div>
+                    )}
                   </div>
-                  <div style={{ fontWeight: 600, color: 'var(--accent-green)' }}>{formatCurrency(lente.precoCaixa)} / cx</div>
+                  <div style={{ fontWeight: 600, color: 'var(--accent-green)', display: 'flex', alignItems: 'center' }}>
+                    {formatCurrency(lente.precoCaixa)} / cx
+                  </div>
                 </div>
               ))}
               {getCompatibleLenses().length === 0 && (
