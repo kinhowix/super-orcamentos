@@ -60,8 +60,12 @@ export default function NovoOrcamentoContato() {
 
       let formatted = val;
       if (field === 'eixo') {
-        formatted = Math.round(num).toString();
+        let eixoVal = Math.round(num);
+        if (eixoVal < 0) eixoVal = 0;
+        if (eixoVal > 180) eixoVal = 180;
+        formatted = `${eixoVal}º`;
       } else {
+        num = Math.round(num * 4) / 4;
         formatted = num > 0 ? `+${num.toFixed(2)}` : num.toFixed(2);
       }
 

@@ -321,8 +321,12 @@ export default function NovoOrcamento() {
 
       let formatted = val
       if (field === 'eixo') {
-        formatted = Math.round(num).toString()
+        let eixoVal = Math.round(num)
+        if (eixoVal < 0) eixoVal = 0
+        if (eixoVal > 180) eixoVal = 180
+        formatted = `${eixoVal}º`
       } else {
+        num = Math.round(num * 4) / 4
         formatted = num > 0 ? `+${num.toFixed(2)}` : num.toFixed(2)
       }
 
@@ -458,8 +462,8 @@ export default function NovoOrcamento() {
 
     if (receita.od.esferico || receita.oe.esferico) {
       msg += `\n*Receita:* \n`
-      msg += `OD: ${receita.od.esferico || '0.00'}/${receita.od.cilindro || '0.00'} Eixo: ${receita.od.eixo || '0'}° Add: ${receita.od.adicao || '0.00'}\n`
-      msg += `OE: ${receita.oe.esferico || '0.00'}/${receita.oe.cilindro || '0.00'} Eixo: ${receita.oe.eixo || '0'}° Add: ${receita.oe.adicao || '0.00'}\n`
+      msg += `OD: ${receita.od.esferico || '0.00'}/${receita.od.cilindro || '0.00'} Eixo: ${receita.od.eixo || '0º'} Add: ${receita.od.adicao || '0.00'}\n`
+      msg += `OE: ${receita.oe.esferico || '0.00'}/${receita.oe.cilindro || '0.00'} Eixo: ${receita.oe.eixo || '0º'} Add: ${receita.oe.adicao || '0.00'}\n`
     }
     
     msg += `\n`
