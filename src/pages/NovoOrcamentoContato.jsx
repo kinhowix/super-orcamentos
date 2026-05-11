@@ -89,6 +89,13 @@ export default function NovoOrcamentoContato() {
     };
   }, [receita, tipoReceita]);
 
+  const parseCylinders = (str) => {
+    if (!str) return [];
+    return str.split(',')
+      .map(s => parseFloat(s.trim().replace('+', '')))
+      .filter(n => !isNaN(n));
+  };
+
   const getCompatibleLenses = () => {
     let result = [...lentes];
 
@@ -104,7 +111,9 @@ export default function NovoOrcamentoContato() {
     // based on the receitaConvertida. We'll leave it simple here but we could add it.
     const esfOD = parseFloat(receitaConvertida.od.esferico) || 0;
     const esfOE = parseFloat(receitaConvertida.oe.esferico) || 0;
-    const hasAstigmatism = (parseFloat(receitaConvertida.od.cilindro) || 0) !== 0 || (parseFloat(receitaConvertida.oe.cilindro) || 0) !== 0;
+    const cylOD = parseFloat(receitaConvertida.od.cilindro) || 0;
+    const cylOE = parseFloat(receitaConvertida.oe.cilindro) || 0;
+    const hasAstigmatism = cylOD !== 0 || cylOE !== 0;
     const hasAddition = (parseFloat(receitaConvertida.od.adicao) || 0) > 0 || (parseFloat(receitaConvertida.oe.adicao) || 0) > 0;
 
     // Smart filtering based on drawing (Desenho)
@@ -174,6 +183,18 @@ export default function NovoOrcamentoContato() {
 
       if (!resultOD.fits && !resultOE.fits) return null;
 
+      // Verificação de Cilindro Exato
+      const availableCyls = parseCylinders(l.cilindro);
+      let cilExatoOD = true;
+      let cilExatoOE = true;
+
+      if (cylOD !== 0 && (l.desenho === 'Tórico' || l.desenho === 'Tórico Multifocal')) {
+        cilExatoOD = availableCyls.some(v => Math.abs(v - cylOD) < 0.01);
+      }
+      if (cylOE !== 0 && (l.desenho === 'Tórico' || l.desenho === 'Tórico Multifocal')) {
+        cilExatoOE = availableCyls.some(v => Math.abs(v - cylOE) < 0.01);
+      }
+
       let compatibilidade = 'Ambos';
       if (resultOD.fits && !resultOE.fits) compatibilidade = 'Apenas OD';
       if (!resultOD.fits && resultOE.fits) compatibilidade = 'Apenas OE';
@@ -184,6 +205,8 @@ export default function NovoOrcamentoContato() {
         fitsOE: resultOE.fits, 
         noteOD: resultOD.note,
         noteOE: resultOE.note,
+        cilExatoOD,
+        cilExatoOE,
         compatibilidade, 
         grausIdenticos 
       };
@@ -191,6 +214,7 @@ export default function NovoOrcamentoContato() {
 
     return result;
   };
+
 
   const handleSelectLente = (lente) => {
     setItens(prev => {
@@ -466,12 +490,18 @@ export default function NovoOrcamentoContato() {
                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
                       {lente.desenho} • Descarte: {lente.descarte} • {lente.embalagem} unid/caixa
                     </div>
-                    {(lente.noteOD || lente.noteOE) && (
+                    {(lente.noteOD || lente.noteOE || !lente.cilExatoOD || !lente.cilExatoOE) && (
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '4px' }}>
                         {lente.noteOD && <div>OD: {lente.noteOD}</div>}
                         {lente.noteOE && <div>OE: {lente.noteOE}</div>}
+                        {(!lente.cilExatoOD || !lente.cilExatoOE) && (
+                          <div style={{ color: 'var(--accent-amber)', fontWeight: 500, marginTop: '2px' }}>
+                            ⚠️ Lente se aproxima, mas não tem o grau cilíndrico exato.
+                          </div>
+                        )}
                       </div>
                     )}
+
                   </div>
                   <div style={{ fontWeight: 600, color: 'var(--accent-green)', display: 'flex', alignItems: 'center' }}>
                     {formatCurrency(lente.precoCaixa)} / cx
