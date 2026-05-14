@@ -123,11 +123,11 @@ export default function NovoOrcamentoContato() {
     if (hasAddition && hasAstigmatism) {
        result = result.filter(l => l.desenho === 'Tórico Multifocal');
     } else if (hasAddition) {
-       result = result.filter(l => l.desenho === 'Multifocal' || l.desenho === 'Tórico Multifocal');
+       result = result.filter(l => l.desenho === 'Multifocal');
     } else if (hasAstigmatism) {
-       result = result.filter(l => l.desenho === 'Tórico' || l.desenho === 'Tórico Multifocal');
+       result = result.filter(l => l.desenho === 'Tórico');
     } else {
-       result = result.filter(l => l.desenho === 'Asférico' || l.desenho === 'Esférico' || l.desenho === 'Tórico');
+       result = result.filter(l => l.desenho === 'Asférico' || l.desenho === 'Esférico');
     }
 
     const grausIdenticos = 
@@ -187,8 +187,21 @@ export default function NovoOrcamentoContato() {
       if (!resultOD.fits && !resultOE.fits) return null;
 
       // Verificação de Cilindro
-      const availableCyls = parseCylinders(l.cilindro);
-      const maxCyl = availableCyls.length > 0 ? Math.max(...availableCyls.map(v => Math.abs(v))) : 0;
+      let availableCylsOD = parseCylinders(l.cilindro);
+      let availableCylsOE = parseCylinders(l.cilindro);
+
+      // Regra Especial XR (Hiper Alta +8.50 a +10.00 limita cilindro a -2.25)
+      if (l.limitarCilindroXR === 'Sim') {
+        if (esfOD >= 8.50 && esfOD <= 10.00) {
+          availableCylsOD = availableCylsOD.filter(c => Math.abs(c) <= 2.25);
+        }
+        if (esfOE >= 8.50 && esfOE <= 10.00) {
+          availableCylsOE = availableCylsOE.filter(c => Math.abs(c) <= 2.25);
+        }
+      }
+
+      const maxCylOD = availableCylsOD.length > 0 ? Math.max(...availableCylsOD.map(v => Math.abs(v))) : 0;
+      const maxCylOE = availableCylsOE.length > 0 ? Math.max(...availableCylsOE.map(v => Math.abs(v))) : 0;
       
       let cilExatoOD = true;
       let cilExatoOE = true;
@@ -196,16 +209,16 @@ export default function NovoOrcamentoContato() {
       let fitsCylOE = true;
 
       if (cylOD !== 0 && (l.desenho === 'Tórico' || l.desenho === 'Tórico Multifocal')) {
-        if (Math.abs(cylOD) > maxCyl + 0.01) {
+        if (Math.abs(cylOD) > maxCylOD + 0.01) {
           fitsCylOD = false;
         }
-        cilExatoOD = availableCyls.some(v => Math.abs(v - cylOD) < 0.01);
+        cilExatoOD = availableCylsOD.some(v => Math.abs(v - cylOD) < 0.01);
       }
       if (cylOE !== 0 && (l.desenho === 'Tórico' || l.desenho === 'Tórico Multifocal')) {
-        if (Math.abs(cylOE) > maxCyl + 0.01) {
+        if (Math.abs(cylOE) > maxCylOE + 0.01) {
           fitsCylOE = false;
         }
-        cilExatoOE = availableCyls.some(v => Math.abs(v - cylOE) < 0.01);
+        cilExatoOE = availableCylsOE.some(v => Math.abs(v - cylOE) < 0.01);
       }
 
       const finalFitsOD = resultOD.fits && fitsCylOD;
@@ -225,7 +238,7 @@ export default function NovoOrcamentoContato() {
         noteOE: resultOE.note,
         cilExatoOD,
         cilExatoOE,
-        availableCyls,
+        availableCyls: availableCylsOD,
         compatibilidade, 
         grausIdenticos 
       };

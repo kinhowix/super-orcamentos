@@ -32,12 +32,14 @@ const EMPTY_LENTE_CONTATO = {
   protecaoUV: 'Não',
   descarte: 'Mensal',
   embalagem: 6, // number of lenses per box
-  precoCaixa: 0
+  precoCaixa: 0,
+  limitarCilindroXR: 'Não' // Regra para hiper alta (+8.50 a +10.00)
 };
 
 const STANDARD_CYLS = ['-0.75', '-1.25', '-1.75', '-2.25', '-2.75', '-3.25', '-3.75', '-4.25', '-4.75', '-5.25', '-5.75'];
 const STANDARD_ADDITIONS = ['Low', 'Mid', 'High', '+1.00', '+1.50', '+2.00', '+2.50'];
 const STANDARD_AXES = Array.from({ length: 18 }, (_, i) => `${(i + 1) * 10}º`);
+const STANDARD_AXES_5 = Array.from({ length: 36 }, (_, i) => `${(i + 1) * 5}º`);
 
 export default function CadastroLentesContato() {
   const toast = useToast();
@@ -286,6 +288,13 @@ export default function CadastroLentesContato() {
                 <option value="Não">Não</option>
               </select>
             </div>
+            <div className="form-group">
+              <label className="form-label">Limitar Cilindro em Hiper. Alta (+8.50 a +10.00)?</label>
+              <select className="form-select" value={lente.limitarCilindroXR} onChange={e => handleFieldChange('limitarCilindroXR', e.target.value)}>
+                <option value="Não">Não</option>
+                <option value="Sim">Sim (Máx -2.25 nessa faixa)</option>
+              </select>
+            </div>
           </div>
           
           <div className="form-row">
@@ -344,6 +353,9 @@ export default function CadastroLentesContato() {
               <div style={{ display: 'flex', gap: '4px' }}>
                  <button className="btn btn-secondary btn-sm" style={{ fontSize: '10px' }} onClick={() => handleFieldChange('eixo', STANDARD_AXES.join(', '))}>
                     Selecionar Todos (10-180)
+                 </button>
+                 <button className="btn btn-secondary btn-sm" style={{ fontSize: '10px' }} onClick={() => handleFieldChange('eixo', STANDARD_AXES_5.join(', '))}>
+                    Selecionar Todos (5-180)
                  </button>
                  <button className="btn btn-secondary btn-sm" style={{ fontSize: '10px' }} onClick={() => handleFieldChange('eixo', '')}>
                     Limpar
