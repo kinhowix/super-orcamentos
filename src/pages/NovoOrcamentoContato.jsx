@@ -123,11 +123,11 @@ export default function NovoOrcamentoContato() {
     if (hasAddition && hasAstigmatism) {
        result = result.filter(l => l.desenho === 'Tórico Multifocal');
     } else if (hasAddition) {
-       result = result.filter(l => l.desenho === 'Multifocal' || l.desenho === 'Tórico Multifocal');
+       result = result.filter(l => l.desenho === 'Multifocal');
     } else if (hasAstigmatism) {
-       result = result.filter(l => l.desenho === 'Tórico' || l.desenho === 'Tórico Multifocal');
+       result = result.filter(l => l.desenho === 'Tórico');
     } else {
-       result = result.filter(l => l.desenho === 'Asférico' || l.desenho === 'Esférico' || l.desenho === 'Tórico');
+       result = result.filter(l => l.desenho === 'Asférico' || l.desenho === 'Esférico');
     }
 
     const grausIdenticos = 
