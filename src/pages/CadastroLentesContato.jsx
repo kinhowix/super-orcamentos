@@ -35,6 +35,10 @@ const EMPTY_LENTE_CONTATO = {
   precoCaixa: 0
 };
 
+const STANDARD_CYLS = ['-0.75', '-1.25', '-1.75', '-2.25', '-2.75', '-3.25', '-3.75', '-4.25', '-4.75', '-5.25', '-5.75'];
+const STANDARD_ADDITIONS = ['Low', 'Mid', 'High', '+1.00', '+1.50', '+2.00', '+2.50'];
+const STANDARD_AXES = Array.from({ length: 18 }, (_, i) => `${(i + 1) * 10}º`);
+
 export default function CadastroLentesContato() {
   const toast = useToast();
   const navigate = useNavigate();
@@ -287,17 +291,91 @@ export default function CadastroLentesContato() {
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Cilindro</label>
-              <input className="form-input" placeholder="Ex: -0.75, -1.25, -1.75, -2.25" value={lente.cilindro} onChange={e => handleFieldChange('cilindro', e.target.value)} />
-              <div className="form-helper">Deixe em branco se não for tórica.</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px', minHeight: '32px', padding: '4px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-card)' }}>
+                {lente.cilindro.split(',').map(c => c.trim()).filter(Boolean).map(c => (
+                  <span key={c} className="badge badge-purple" style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }} onClick={() => {
+                    const current = lente.cilindro.split(',').map(x => x.trim()).filter(Boolean);
+                    handleFieldChange('cilindro', current.filter(x => x !== c).join(', '));
+                  }}>
+                    {c} <span style={{ opacity: 0.7 }}>×</span>
+                  </span>
+                ))}
+                {!lente.cilindro && <span style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '4px' }}>Nenhum selecionado</span>}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                {STANDARD_CYLS.map(c => (
+                  <button key={c} className="btn btn-secondary btn-sm" style={{ padding: '2px 6px', fontSize: '10px', height: 'auto' }} onClick={() => {
+                    const current = lente.cilindro.split(',').map(x => x.trim()).filter(Boolean);
+                    if (!current.includes(c)) {
+                      handleFieldChange('cilindro', [...current, c].sort((a,b) => parseFloat(a) - parseFloat(b)).join(', '));
+                    }
+                  }}>
+                    {c}
+                  </button>
+                ))}
+              </div>
             </div>
+            
             <div className="form-group">
               <label className="form-label">Eixo</label>
-              <input className="form-input" placeholder="Ex: 10º a 180º (passos de 10º)" value={lente.eixo} onChange={e => handleFieldChange('eixo', e.target.value)} />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px', minHeight: '32px', padding: '4px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-card)' }}>
+                {lente.eixo.split(',').map(e => e.trim()).filter(Boolean).map(e => (
+                  <span key={e} className="badge badge-amber" style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }} onClick={() => {
+                    const current = lente.eixo.split(',').map(x => x.trim()).filter(Boolean);
+                    handleFieldChange('eixo', current.filter(x => x !== e).join(', '));
+                  }}>
+                    {e} <span style={{ opacity: 0.7 }}>×</span>
+                  </span>
+                ))}
+                {!lente.eixo && <span style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '4px' }}>Nenhum selecionado</span>}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
+                {STANDARD_AXES.map(e => (
+                  <button key={e} className="btn btn-secondary btn-sm" style={{ padding: '2px 6px', fontSize: '10px', height: 'auto' }} onClick={() => {
+                    const current = lente.eixo.split(',').map(x => x.trim()).filter(Boolean);
+                    if (!current.includes(e)) {
+                      handleFieldChange('eixo', [...current, e].sort((a,b) => parseInt(a) - parseInt(b)).join(', '));
+                    }
+                  }}>
+                    {e}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                 <button className="btn btn-secondary btn-sm" style={{ fontSize: '10px' }} onClick={() => handleFieldChange('eixo', STANDARD_AXES.join(', '))}>
+                    Selecionar Todos (10-180)
+                 </button>
+                 <button className="btn btn-secondary btn-sm" style={{ fontSize: '10px' }} onClick={() => handleFieldChange('eixo', '')}>
+                    Limpar
+                 </button>
+              </div>
             </div>
+
             <div className="form-group">
               <label className="form-label">Adição</label>
-              <input className="form-input" placeholder="Ex: Low (até +2.25), High (+2.50)" value={lente.adicao} onChange={e => handleFieldChange('adicao', e.target.value)} />
-              <div className="form-helper">Deixe em branco se não for multifocal.</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px', minHeight: '32px', padding: '4px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-card)' }}>
+                {lente.adicao.split(',').map(a => a.trim()).filter(Boolean).map(a => (
+                  <span key={a} className="badge badge-blue" style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }} onClick={() => {
+                    const current = lente.adicao.split(',').map(x => x.trim()).filter(Boolean);
+                    handleFieldChange('adicao', current.filter(x => x !== a).join(', '));
+                  }}>
+                    {a} <span style={{ opacity: 0.7 }}>×</span>
+                  </span>
+                ))}
+                {!lente.adicao && <span style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '4px' }}>Nenhuma selecionada</span>}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                {STANDARD_ADDITIONS.map(a => (
+                  <button key={a} className="btn btn-secondary btn-sm" style={{ padding: '2px 6px', fontSize: '10px', height: 'auto' }} onClick={() => {
+                    const current = lente.adicao.split(',').map(x => x.trim()).filter(Boolean);
+                    if (!current.includes(a)) {
+                      handleFieldChange('adicao', [...current, a].join(', '));
+                    }
+                  }}>
+                    {a}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
