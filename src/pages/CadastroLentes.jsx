@@ -12,6 +12,7 @@ import {
   saveNiveisARFornecedor, deleteNiveisARFornecedor
 } from '../services/dataStore'
 import { extractPDFStructured } from '../services/pdfParser'
+import { sanitizeNumericInput } from '../services/numericUtils'
 
 // AR levels predefinidos por marca conhecida
 const AR_PREDEFINIDOS = {
@@ -225,9 +226,12 @@ export default function CadastroLentes() {
   }
 
   const handleSpecChange = (field, value) => {
+    const graduationFields = ['esferico_min', 'esferico_max', 'cilindro_max', 'adicao_min', 'adicao_max'];
+    const sanitized = graduationFields.includes(field) ? sanitizeNumericInput(value, 2) : value;
+    
     setLente(prev => ({
       ...prev,
-      especificacoes: { ...prev.especificacoes, [field]: value }
+      especificacoes: { ...prev.especificacoes, [field]: sanitized }
     }))
   }
 
@@ -248,7 +252,8 @@ export default function CadastroLentes() {
   const handleIndiceChange = (index, field, value) => {
     setLente(prev => {
       const newIndices = [...prev.indices]
-      newIndices[index] = { ...newIndices[index], [field]: value }
+      const sanitizedValue = field === 'indice' ? sanitizeNumericInput(value) : value
+      newIndices[index] = { ...newIndices[index], [field]: sanitizedValue }
       return { ...prev, indices: newIndices }
     })
   }
@@ -462,7 +467,12 @@ export default function CadastroLentes() {
   const handleLoteChange = (index, field, value) => {
     setLoteLentes(prev => {
       const updated = [...prev]
-      updated[index] = { ...updated[index], [field]: value }
+      const graduationFields = ['esferico_min', 'esferico_max', 'cilindro_max', 'adicao_min', 'adicao_max', 'adicao'];
+      let sanitizedValue = value;
+      if (field === 'indice') sanitizedValue = sanitizeNumericInput(value, 2);
+      else if (graduationFields.includes(field)) sanitizedValue = sanitizeNumericInput(value, 2);
+      
+      updated[index] = { ...updated[index], [field]: sanitizedValue }
       return updated
     })
   }

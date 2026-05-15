@@ -3,6 +3,7 @@ import { Plus, Trash2, Save, Send, Search } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { getLentesContato, saveOrcamento, formatCurrency } from '../services/dataStore';
 import { convertPrescriptionToContactLens } from '../services/contactLensCalculations';
+import { sanitizeNumericInput, roundToDiopterStep, formatDiopter } from '../services/numericUtils';
 
 const EMPTY_ITEM = {
   lenteId: '',
@@ -42,7 +43,8 @@ export default function NovoOrcamentoContato() {
   }, []);
 
   const handleReceitaChange = (eye, field, value) => {
-    const sanitizedValue = value.replace(',', '.');
+    const isEixo = field === 'eixo';
+    const sanitizedValue = sanitizeNumericInput(value, isEixo ? 0 : 2, isEixo ? 0 : null, isEixo ? 180 : null);
     setReceita(prev => ({
       ...prev,
       [eye]: { ...prev[eye], [field]: sanitizedValue }
@@ -54,16 +56,12 @@ export default function NovoOrcamentoContato() {
       const val = prev[eye][field];
       if (!val || val === '-' || val === '+') return prev;
       
-      let str = String(val).replace(/\s/g, '');
-      let num = parseFloat(str);
+      const isEixo = field === 'eixo';
+      const num = parseFloat(val);
       if (isNaN(num)) return prev;
 
-      let formatted = val;
-      if (field === 'eixo') {
-        formatted = Math.round(num).toString();
-      } else {
-        formatted = num > 0 ? `+${num.toFixed(2)}` : num.toFixed(2);
-      }
+      const rounded = isEixo ? Math.round(num) : roundToDiopterStep(num);
+      const formatted = formatDiopter(rounded, isEixo);
 
       if (prev[eye][field] === formatted) return prev;
 

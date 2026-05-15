@@ -3,6 +3,7 @@ import {
   Plus, Trash2, Save, Send, Search, Camera, ClipboardCheck, Loader2
 } from 'lucide-react'
 import { extractTextFromImage, parsePrescriptionText } from '../services/ocrService'
+import { sanitizeNumericInput, roundToDiopterStep, formatDiopter } from '../services/numericUtils'
 
 import { useToast } from '../contexts/ToastContext'
 import {
@@ -169,7 +170,10 @@ export default function NovoOrcamento() {
 
     // 5. Apply User Filters (Optional)
     if (filterIndex) {
-      result = result.filter(l => l.indice === filterIndex)
+      result = result.filter(l => {
+        const normalizedIndice = String(l.indice || '').replace(',', '.')
+        return normalizedIndice === filterIndex
+      })
     }
 
     if (filterFornecedor) {
@@ -250,7 +254,7 @@ export default function NovoOrcamento() {
     })
 
     return {
-      indices: [...new Set(compatibleWithDegree.map(l => l.indice))].sort(),
+      indices: [...new Set(compatibleWithDegree.map(l => String(l.indice || '').replace(',', '.')))].sort(),
       fornecedores: [...new Set(compatibleWithDegree.map(l => l.fornecedor))].sort()
     }
   }, [lentes, receita])
@@ -302,8 +306,9 @@ export default function NovoOrcamento() {
   }
 
   const handleReceitaChange = (eye, field, value) => {
-    // Troca vírgula por ponto para facilitar a digitação
-    const sanitizedValue = value.replace(',', '.')
+    // Sanitiza a entrada (converte vírgula para ponto e limita casas decimais/valores)
+    const isEixo = field === 'eixo'
+    const sanitizedValue = sanitizeNumericInput(value, isEixo ? 0 : 2, isEixo ? 0 : null, isEixo ? 180 : null)
     setReceita(prev => ({
       ...prev,
       [eye]: { ...prev[eye], [field]: sanitizedValue }
@@ -315,16 +320,13 @@ export default function NovoOrcamento() {
       const val = prev[eye][field]
       if (!val || val === '-' || val === '+') return prev
       
-      let str = String(val).replace(/\s/g, '')
-      let num = parseFloat(str)
+      const isEixo = field === 'eixo'
+      const num = parseFloat(val)
       if (isNaN(num)) return prev
 
-      let formatted = val
-      if (field === 'eixo') {
-        formatted = Math.round(num).toString()
-      } else {
-        formatted = num > 0 ? `+${num.toFixed(2)}` : num.toFixed(2)
-      }
+      // Arredonda para o passo de 0.25 (exceto eixo que é inteiro)
+      const rounded = isEixo ? Math.round(num) : roundToDiopterStep(num)
+      const formatted = formatDiopter(rounded, isEixo)
 
       if (prev[eye][field] === formatted) return prev
 
