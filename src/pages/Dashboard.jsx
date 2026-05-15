@@ -33,7 +33,7 @@ export default function Dashboard() {
     <div className="animate-in">
       <div style={{ marginTop: '24px' }}></div>
 
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+      <div className="stats-grid">
 
 
       </div>
