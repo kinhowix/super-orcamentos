@@ -82,6 +82,7 @@ body,
 #root {
   height: 100%;
   width: 100%;
+  overflow-x: hidden; /* Prevent global horizontal scroll */
 }
 
 body {
@@ -147,22 +148,23 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-width: 0; /* Prevent flex items from overflowing */
-  margin-left: var(--sidebar-width);
+  min-width: 0;
+  padding-left: var(--sidebar-width); /* Use padding instead of margin */
   transition: all var(--transition-slow);
+  width: 100%;
 }
 
 .main-content.collapsed {
-  margin-left: var(--sidebar-collapsed);
-  width: calc(100% - var(--sidebar-collapsed));
+  padding-left: var(--sidebar-collapsed);
 }
 
 .page-content {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden; /* Prevent horizontal scroll on the page itself */
   padding: 32px;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Sidebar */
@@ -903,14 +905,16 @@ body {
   }
 
   .main-content {
-    margin-left: 0;
-    width: 100%;
-    max-width: 100%;
+    padding-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
+  .main-content,
   .main-content.collapsed {
-    margin-left: 0;
-    width: 100%;
+    padding-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .mobile-header {
