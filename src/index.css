@@ -82,7 +82,8 @@ body,
 #root {
   height: 100%;
   width: 100%;
-  overflow-x: hidden; /* Prevent global horizontal scroll */
+  overflow-x: hidden;
+  /* Prevent global horizontal scroll */
 }
 
 body {
@@ -149,7 +150,8 @@ body {
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
-  padding-left: var(--sidebar-width); /* Use padding instead of margin */
+  padding-left: var(--sidebar-width);
+  /* Use padding instead of margin */
   transition: all var(--transition-slow);
   width: 100%;
 }
@@ -350,7 +352,7 @@ body {
   padding: 24px;
   transition: all var(--transition-normal);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  width: 100%;
+  width: 75%;
   max-width: 100%;
 }
 
@@ -1264,6 +1266,7 @@ body {
   }
 
   .main-content {
+    padding-left: 0 !important;
     margin-left: 0 !important;
   }
 
@@ -1276,7 +1279,13 @@ body {
     gap: 12px;
   }
 
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
   .card {
+    width: 100% !important;
     padding: 16px;
   }
 
