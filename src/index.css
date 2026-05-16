@@ -352,7 +352,7 @@ body {
   padding: 24px;
   transition: all var(--transition-normal);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  width: 75%;
+  width: 100%;
   max-width: 100%;
 }
 
@@ -1285,7 +1285,6 @@ body {
   }
 
   .card {
-    width: 100% !important;
     padding: 16px;
   }
 
