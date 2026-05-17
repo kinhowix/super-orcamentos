@@ -66,19 +66,6 @@ export default function Orcamentos() {
     msg += `━━━━━━━━━━━━━━━━━━\n`
     msg += `*Cliente:* ${orc.cliente?.nome}\n`
 
-    const rec = orc.tipo === 'contato' 
-      ? (orc.receitaOriginal || orc.receita) 
-      : (orc.receita || (orc.itens?.[0]?.olhoDireito ? {
-          od: orc.itens[0].olhoDireito,
-          oe: orc.itens[0].olhoEsquerdo
-        } : null));
-
-    if (rec) {
-      msg += `\n*Receita ${orc.tipo === 'contato' && orc.tipoReceitaOriginal === 'oculos' ? '(Óculos, com conversão de vértice aplicada)' : ''}:* \n`
-      msg += `OD: ${rec.od?.esferico || '0.00'}/${rec.od?.cilindro || '0.00'} Eixo: ${rec.od?.eixo || '0'}° Add: ${rec.od?.adicao || '0.00'}\n`
-      msg += `OE: ${rec.oe?.esferico || '0.00'}/${rec.oe?.cilindro || '0.00'} Eixo: ${rec.oe?.eixo || '0'}° Add: ${rec.oe?.adicao || '0.00'}\n`
-    }
-
     msg += `\n`
 
     orc.itens?.forEach((item, idx) => {
@@ -102,6 +89,7 @@ export default function Orcamentos() {
 
     msg += `━━━━━━━━━━━━━━━━━━\n`
     msg += `*💰 Total: ${formatCurrency(orc.total || 0)}*\n`
+    msg += `*Oticas Paris Sul*\n`
 
     if (orc.observacoes) {
       msg += `\n📝 ${orc.observacoes}\n`
@@ -350,12 +338,12 @@ export default function Orcamentos() {
 
             {/* Prescription Display */}
             {(() => {
-              const rec = selectedOrc.tipo === 'contato' 
+              const rec = selectedOrc.tipo === 'contato'
                 ? (selectedOrc.receitaOriginal || selectedOrc.receita)
                 : (selectedOrc.receita || (selectedOrc.itens?.[0]?.olhoDireito ? {
-                    od: selectedOrc.itens[0].olhoDireito,
-                    oe: selectedOrc.itens[0].olhoEsquerdo
-                  } : null));
+                  od: selectedOrc.itens[0].olhoDireito,
+                  oe: selectedOrc.itens[0].olhoEsquerdo
+                } : null));
 
               if (!rec) return null;
 

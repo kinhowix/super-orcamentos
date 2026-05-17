@@ -317,6 +317,53 @@ export default function NovoOrcamentoContato() {
     toast.success('Orçamento salvo com sucesso!');
     setCliente({ nome: '', telefone: '' });
     setItens([{ ...EMPTY_ITEM }]);
+    setObservacoes('');
+    setParcelas(1);
+  };
+
+  const handleSendWhatsApp = async () => {
+    if (!cliente.nome) {
+      toast.error('Informe o nome do cliente');
+      return;
+    }
+
+    // Save first
+    await handleSave('enviado');
+
+    // Build WhatsApp message
+    let msg = `*🔍 Orçamento de Lentes*\n`;
+    msg += `━━━━━━━━━━━━━━━━━━\n`;
+    msg += `*Cliente:* ${cliente.nome}\n\n`;
+
+    itens.forEach((item, idx) => {
+      if (item.modelo) {
+        msg += `*📌 Opção ${idx + 1}:* ${item.marca} - ${item.modelo}\n`;
+        msg += `   Qtd. Caixas: OD: ${item.qtdCaixasOD || 0} | OE: ${item.qtdCaixasOE || 0}\n`;
+        msg += `   Valor: ${formatCurrency(calculateItemTotal(item))}\n\n`;
+      }
+    });
+
+    msg += `━━━━━━━━━━━━━━━━━━\n`;
+    msg += `*💰 Total: ${formatCurrency(total)}*\n`;
+    msg += `*Oticas Paris Sul*\n`;
+
+    if (parcelas > 1) {
+      msg += `*💳 Pagamento:* ${parcelas}x de ${formatCurrency(total / parcelas)} sem juros\n`;
+    } else {
+      msg += `*💳 Pagamento:* À vista no ${formatCurrency(total)}\n`;
+    }
+
+    if (observacoes) {
+      msg += `\n📝 *Obs:* ${observacoes}\n`;
+    }
+
+    // Clean phone number for URL
+    const phone = cliente.telefone?.replace(/\D/g, '') || '';
+    const url = phone
+      ? `https://api.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(msg)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+
+    window.open(url, '_blank');
   };
 
   const maskPhone = (value) => {
@@ -488,9 +535,47 @@ export default function NovoOrcamentoContato() {
               <span style={{ color: 'var(--accent-green)' }}>{formatCurrency(total)}</span>
             </div>
 
-            <button className="btn btn-primary" style={{ width: '100%', marginTop: '20px' }} onClick={() => handleSave('pendente')}>
-              <Save size={16} /> Salvar Orçamento
-            </button>
+            <div className="divider" />
+
+            <div className="form-group">
+              <label className="form-label">Condições de Pagamento</label>
+              <select
+                className="form-select"
+                value={parcelas}
+                onChange={e => setParcelas(parseInt(e.target.value))}
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                  <option key={n} value={n}>
+                    {n === 1 ? 'À vista' : `${n}x sem juros`}
+                  </option>
+                ))}
+              </select>
+              {parcelas > 1 && (
+                <div style={{ fontSize: '13px', marginTop: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  {parcelas}x de {formatCurrency(total / parcelas)}
+                </div>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Observações</label>
+              <textarea
+                className="form-textarea"
+                placeholder="Prazo, condições, etc."
+                value={observacoes}
+                onChange={e => setObservacoes(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => handleSave('pendente')}>
+                <Save size={16} /> Salvar
+              </button>
+              <button className="btn btn-whatsapp" style={{ flex: 1 }} onClick={handleSendWhatsApp}>
+                <Send size={16} /> WhatsApp
+              </button>
+            </div>
           </div>
         </div>
       </div>
