@@ -68,6 +68,16 @@ export default function Dashboard() {
             <button
               className="btn btn-secondary btn-lg"
               style={{ width: '100%', justifyContent: 'space-between' }}
+              onClick={() => navigate('/orcamentos')}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <FileText size={20} /> Ver Orçamentos
+              </span>
+              <ArrowRight size={18} />
+            </button>
+            <button
+              className="btn btn-secondary btn-lg"
+              style={{ width: '100%', justifyContent: 'space-between' }}
               onClick={() => navigate('/catalogo')}
             >
               <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

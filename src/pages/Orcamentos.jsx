@@ -68,31 +68,64 @@ export default function Orcamentos() {
 
     msg += `\n`
 
-    orc.itens?.forEach((item, idx) => {
-      if (orc.tipo === 'contato') {
+    const isContato = orc.tipo === 'contato'
+    const hasSeparateOrcamento = !isContato && orc.itens?.some(item => item.armacao !== undefined)
+
+    if (isContato) {
+      orc.itens?.forEach((item, idx) => {
         if (item.modelo) {
           msg += `*📌 Opção ${idx + 1}:* ${item.marca} - ${item.modelo}\n`
           msg += `   Qtd. Caixas: OD: ${item.qtdCaixasOD || 0} | OE: ${item.qtdCaixasOE || 0}\n`
           msg += `   Valor: ${formatCurrency(item.total)}\n\n`
         }
-      } else {
+      })
+    } else if (hasSeparateOrcamento) {
+      orc.itens?.forEach((item, idx) => {
+        if (item.lenteName) {
+          msg += `*📌 Opção ${idx + 1}:* ${item.lenteName}\n`
+          msg += `   Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n`
+          if (item.armacao?.referencia) {
+            msg += `   👓 Armação: ${item.armacao.referencia} (${formatCurrency(item.armacao.preco)})\n`
+          } else if (item.armacao?.preco > 0) {
+            msg += `   👓 Armação: Sem Ref. (${formatCurrency(item.armacao.preco)})\n`
+          }
+          
+          const itemTotal = (parseFloat(item.preco) || 0) + (parseFloat(item.armacao?.preco) || 0) - (parseFloat(item.desconto) || 0)
+          msg += `   💰 *Subtotal: ${formatCurrency(itemTotal)}*\n`
+          
+          const itemParcelas = item.parcelas || 1
+          if (itemParcelas > 1) {
+            msg += `   💳 Pagamento: ${itemParcelas}x de ${formatCurrency(itemTotal / itemParcelas)} sem juros\n\n`
+          } else {
+            msg += `   💳 Pagamento: À vista no ${formatCurrency(itemTotal)}\n\n`
+          }
+        }
+      })
+    } else {
+      // Fallback/Modelo antigo
+      orc.itens?.forEach((item, idx) => {
         if (item.lenteName) {
           msg += `*📌 Opção ${idx + 1}:* ${item.lenteName}\n`
           msg += `   Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n\n`
         }
-      }
-    })
+      })
 
-    if (orc.armacao && orc.armacao.referencia) {
-      msg += `*👓 Armação:* ${orc.armacao.referencia}\n\n`
+      if (orc.armacao && orc.armacao.referencia) {
+        msg += `*👓 Armação:* ${orc.armacao.referencia}\n\n`
+      }
     }
 
-    msg += `━━━━━━━━━━━━━━━━━━\n`
-    msg += `*💰 Total: ${formatCurrency(orc.total || 0)}*\n`
+    if (!hasSeparateOrcamento) {
+      msg += `━━━━━━━━━━━━━━━━━━\n`
+      msg += `*💰 Total: ${formatCurrency(orc.total || 0)}*\n`
+    } else {
+      msg += `━━━━━━━━━━━━━━━━━━\n`
+    }
+    
     msg += `*Oticas Paris Sul*\n`
 
     if (orc.observacoes) {
-      msg += `\n📝 ${orc.observacoes}\n`
+      msg += `\n📝 *Obs:* ${orc.observacoes}\n`
     }
 
     const phone = orc.cliente?.telefone?.replace(/\D/g, '') || ''
@@ -385,92 +418,168 @@ export default function Orcamentos() {
               );
             })()}
 
-            {selectedOrc.itens?.map((item, idx) => (
-              <div key={idx} style={{
-                padding: '16px',
-                background: 'var(--bg-glass)',
-                borderRadius: 'var(--radius-sm)',
-                marginBottom: '12px',
-                border: '1px solid var(--border-color)',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 600 }}>Opção {idx + 1}</span>
-                  <span style={{ fontWeight: 700, color: 'var(--accent-green)' }}>
-                    {formatCurrency(item.preco || item.total || 0)}
-                  </span>
-                </div>
-                <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                  {selectedOrc.tipo === 'contato' ? (
-                    <>
+            {(() => {
+              const isContato = selectedOrc.tipo === 'contato'
+              const hasSeparateOrcamento = !isContato && selectedOrc.itens?.some(item => item.armacao !== undefined)
+
+              if (isContato) {
+                return selectedOrc.itens?.map((item, idx) => (
+                  <div key={idx} style={{
+                    padding: '16px',
+                    background: 'var(--bg-glass)',
+                    borderRadius: 'var(--radius-sm)',
+                    marginBottom: '12px',
+                    border: '1px solid var(--border-color)',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontWeight: 600 }}>Opção {idx + 1}</span>
+                      <span style={{ fontWeight: 700, color: 'var(--accent-green)' }}>
+                        {formatCurrency(item.total || 0)}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
                       <div>{item.marca} - {item.modelo}</div>
                       <div style={{ marginTop: '4px', fontSize: '13px' }}>
                         OD: {item.qtdCaixasOD || 0} cx | OE: {item.qtdCaixasOE || 0} cx
                       </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>{item.lenteName || 'Lente não selecionada'}</div>
-                      {item.antirreflexo && (
-                        <div>AR: {getAntiReflexoLabel(item.antirreflexo)}</div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
+                    </div>
+                  </div>
+                ))
+              }
 
-            {selectedOrc.tipo !== 'contato' && selectedOrc.armacao && (selectedOrc.armacao.referencia || selectedOrc.armacao.preco > 0) && (
-              <div style={{
-                padding: '16px',
-                background: 'rgba(255,255,255,0.02)',
-                borderRadius: 'var(--radius-sm)',
-                marginBottom: '12px',
-                border: '1px solid var(--border-color)',
-                borderLeft: '4px solid var(--accent-primary)',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    👓 Armação
-                  </span>
-                  {selectedOrc.armacao.preco > 0 && (
-                    <span style={{ fontWeight: 700, color: 'var(--accent-green)' }}>
-                      {formatCurrency(selectedOrc.armacao.preco)}
+              if (hasSeparateOrcamento) {
+                return (
+                  <>
+                    {selectedOrc.itens?.map((item, idx) => {
+                      const itemTotal = (parseFloat(item.preco) || 0) + (parseFloat(item.armacao?.preco) || 0) - (parseFloat(item.desconto) || 0)
+                      return (
+                        <div key={idx} style={{
+                          padding: '16px',
+                          background: 'var(--bg-glass)',
+                          borderRadius: 'var(--radius-sm)',
+                          marginBottom: '12px',
+                          border: '1px solid var(--border-color)',
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <span style={{ fontWeight: 600 }}>Opção {idx + 1}</span>
+                            <span style={{ fontWeight: 700, color: 'var(--accent-green)' }}>
+                              {formatCurrency(itemTotal)}
+                            </span>
+                          </div>
+                          
+                          <div style={{ fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div><strong>Lente:</strong> {item.lenteName || 'Lente não selecionada'}</div>
+                            {item.antirreflexo && (
+                              <div><strong>Antirreflexo:</strong> {getAntiReflexoLabel(item.antirreflexo)}</div>
+                            )}
+                            
+                            {(item.armacao?.referencia || item.armacao?.preco > 0) && (
+                              <div style={{ marginTop: '4px', paddingLeft: '8px', borderLeft: '2px solid var(--accent-primary)' }}>
+                                <div><strong>Armação:</strong> {item.armacao.referencia || 'Sem Referência'}</div>
+                                {item.armacao.preco > 0 && (
+                                  <div><strong>Preço Armação:</strong> {formatCurrency(item.armacao.preco)}</div>
+                                )}
+                              </div>
+                            )}
+
+                            {item.desconto > 0 && (
+                              <div style={{ color: 'var(--accent-red)' }}>
+                                <strong>Desconto:</strong> -{formatCurrency(item.desconto)}
+                              </div>
+                            )}
+
+                            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                              <strong>Pagamento:</strong> {item.parcelas && item.parcelas > 1 ? `${item.parcelas}x de ${formatCurrency(itemTotal / item.parcelas)} sem juros` : 'À vista'}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </>
+                )
+              }
+
+              // Fallback / Old budget schema
+              return (
+                <>
+                  {selectedOrc.itens?.map((item, idx) => (
+                    <div key={idx} style={{
+                      padding: '16px',
+                      background: 'var(--bg-glass)',
+                      borderRadius: 'var(--radius-sm)',
+                      marginBottom: '12px',
+                      border: '1px solid var(--border-color)',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span style={{ fontWeight: 600 }}>Opção {idx + 1}</span>
+                        <span style={{ fontWeight: 700, color: 'var(--accent-green)' }}>
+                          {formatCurrency(item.preco || 0)}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                        <div>{item.lenteName || 'Lente não selecionada'}</div>
+                        {item.antirreflexo && (
+                          <div>AR: {getAntiReflexoLabel(item.antirreflexo)}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {selectedOrc.armacao && (selectedOrc.armacao.referencia || selectedOrc.armacao.preco > 0) && (
+                    <div style={{
+                      padding: '16px',
+                      background: 'rgba(255,255,255,0.02)',
+                      borderRadius: 'var(--radius-sm)',
+                      marginBottom: '12px',
+                      border: '1px solid var(--border-color)',
+                      borderLeft: '4px solid var(--accent-primary)',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          👓 Armação
+                        </span>
+                        {selectedOrc.armacao.preco > 0 && (
+                          <span style={{ fontWeight: 700, color: 'var(--accent-green)' }}>
+                            {formatCurrency(selectedOrc.armacao.preco)}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                        {selectedOrc.armacao.referencia || 'Referência não informada'}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="divider" />
+
+                  {selectedOrc.desconto > 0 && (
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: '14px',
+                      color: 'var(--accent-red)',
+                      marginBottom: '8px',
+                      fontWeight: 600
+                    }}>
+                      <span>Desconto</span>
+                      <span>-{formatCurrency(selectedOrc.desconto)}</span>
+                    </div>
+                  )}
+
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: '20px',
+                    fontWeight: 700,
+                  }}>
+                    <span>Total</span>
+                    <span style={{ color: 'var(--accent-green)' }}>
+                      {formatCurrency(selectedOrc.total || 0)}
                     </span>
-                  )}
-                </div>
-                <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                  {selectedOrc.armacao.referencia || 'Referência não informada'}
-                </div>
-              </div>
-            )}
-
-            <div className="divider" />
-
-            {selectedOrc.desconto > 0 && (
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: '14px',
-                color: 'var(--accent-red)',
-                marginBottom: '8px',
-                fontWeight: 600
-              }}>
-                <span>Desconto</span>
-                <span>-{formatCurrency(selectedOrc.desconto)}</span>
-              </div>
-            )}
-
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: '20px',
-              fontWeight: 700,
-            }}>
-              <span>Total</span>
-              <span style={{ color: 'var(--accent-green)' }}>
-                {formatCurrency(selectedOrc.total || 0)}
-              </span>
-            </div>
+                  </div>
+                </>
+              )
+            })()}
 
             {selectedOrc.observacoes && (
               <div style={{
