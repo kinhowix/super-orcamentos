@@ -17,13 +17,16 @@ const EMPTY_ITEM = {
   indice: '',
   antirreflexo: '',
   preco: 0,
+  armacao: { referencia: '', preco: 0 },
+  desconto: 0,
+  parcelas: 1
 }
 
 export default function NovoOrcamento() {
   const toast = useToast()
   const [lentes, setLentes] = useState([])
   const [cliente, setCliente] = useState({ nome: '', telefone: '' })
-  const [itens, setItens] = useState([{ ...EMPTY_ITEM }])
+  const [itens, setItens] = useState([{ ...EMPTY_ITEM, armacao: { referencia: '', preco: 0 } }])
   const [receita, setReceita] = useState({
     od: { esferico: '', cilindro: '', eixo: '', adicao: '' },
     oe: { esferico: '', cilindro: '', eixo: '', adicao: '' },
@@ -39,9 +42,31 @@ export default function NovoOrcamento() {
   const [showOcrConfirm, setShowOcrConfirm] = useState(false)
   const [ocrResult, setOcrResult] = useState(null)
   const [ocrPreview, setOcrPreview] = useState(null)
-  const [parcelas, setParcelas] = useState(1)
-  const [armacao, setArmacao] = useState({ referencia: '', preco: 0 })
-  const [desconto, setDesconto] = useState(0)
+
+  const handleItemArmacaoChange = (idx, field, value) => {
+    setItens(prev => {
+      const updated = [...prev]
+      updated[idx] = {
+        ...updated[idx],
+        armacao: {
+          ...updated[idx].armacao,
+          [field]: value
+        }
+      }
+      return updated
+    })
+  }
+
+  const handleItemChange = (idx, field, value) => {
+    setItens(prev => {
+      const updated = [...prev]
+      updated[idx] = {
+        ...updated[idx],
+        [field]: value
+      }
+      return updated
+    })
+  }
 
   // Selection Filters
   const [filterIndex, setFilterIndex] = useState('')
@@ -338,7 +363,7 @@ export default function NovoOrcamento() {
   }
 
   const addItem = () => {
-    setItens(prev => [...prev, { ...EMPTY_ITEM }])
+    setItens(prev => [...prev, { ...EMPTY_ITEM, armacao: { referencia: '', preco: 0 } }])
     setActiveItemIdx(itens.length)
   }
 
@@ -350,7 +375,14 @@ export default function NovoOrcamento() {
     }
   }
 
-  const total = (itens.reduce((sum, item) => sum + (item.preco || 0), 0) + (parseFloat(armacao.preco) || 0)) - (parseFloat(desconto) || 0)
+  const calculateItemTotal = (item) => {
+    const itemPreco = parseFloat(item.preco) || 0
+    const armacaoPreco = parseFloat(item.armacao?.preco) || 0
+    const itemDesconto = parseFloat(item.desconto) || 0
+    return Math.max(0, itemPreco + armacaoPreco - itemDesconto)
+  }
+
+  const total = calculateItemTotal(itens[0] || {})
 
   const maskPhone = (value) => {
     if (!value) return ''
@@ -411,19 +443,29 @@ export default function NovoOrcamento() {
       return
     }
 
+    const updatedItens = itens.map(item => ({
+      ...item,
+      preco: parseFloat(item.preco) || 0,
+      armacao: {
+        referencia: item.armacao?.referencia || '',
+        preco: parseFloat(item.armacao?.preco) || 0
+      },
+      desconto: parseFloat(item.desconto) || 0,
+      parcelas: parseInt(item.parcelas) || 1
+    }))
+
+    const firstOptionTotal = updatedItens.length > 0 
+      ? calculateItemTotal(updatedItens[0])
+      : 0
+
     const orcamento = {
       cliente,
       receita,
-      itens: itens.map(item => ({
-        ...item,
-        preco: parseFloat(item.preco) || 0,
-      })),
-      armacao: {
-        ...armacao,
-        preco: parseFloat(armacao.preco) || 0
-      },
-      desconto: parseFloat(desconto) || 0,
-      total,
+      itens: updatedItens,
+      // For backward compatibility
+      armacao: updatedItens[0]?.armacao || { referencia: '', preco: 0 },
+      desconto: updatedItens[0]?.desconto || 0,
+      total: firstOptionTotal,
       observacoes,
       status,
     }
@@ -437,9 +479,7 @@ export default function NovoOrcamento() {
       od: { esferico: '', cilindro: '', eixo: '', adicao: '' },
       oe: { esferico: '', cilindro: '', eixo: '', adicao: '' },
     })
-    setItens([{ ...EMPTY_ITEM }])
-    setArmacao({ referencia: '', preco: 0 })
-    setDesconto(0)
+    setItens([{ ...EMPTY_ITEM, armacao: { referencia: '', preco: 0 } }])
     setObservacoes('')
     setActiveItemIdx(0)
   }
@@ -450,40 +490,40 @@ export default function NovoOrcamento() {
       return
     }
 
-    // Save first
-    await handleSave('enviado')
-
     // Build WhatsApp message
     let msg = `*🔍 Orçamento de Lentes*\n`
     msg += `━━━━━━━━━━━━━━━━━━\n`
-    msg += `*Cliente:* ${cliente.nome}\n`
-
-    msg += `\n`
+    msg += `*Cliente:* ${cliente.nome}\n\n`
 
     itens.forEach((item, idx) => {
       if (item.lenteName) {
         msg += `*📌 Opção ${idx + 1}:* ${item.lenteName}\n`
-        msg += `   Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n\n`
+        msg += `   Antirreflexo: ${getAntiReflexoLabel(item.antirreflexo)}\n`
+        if (item.armacao?.referencia) {
+          msg += `   👓 Armação: ${item.armacao.referencia}\n`
+        }
+        
+        const itemTotal = calculateItemTotal(item)
+        msg += `   💰 *Subtotal: ${formatCurrency(itemTotal)}*\n`
+        
+        const itemParcelas = item.parcelas || 1
+        if (itemParcelas > 1) {
+          msg += `   💳 Pagamento: ${itemParcelas}x de ${formatCurrency(itemTotal / itemParcelas)} sem juros\n\n`
+        } else {
+          msg += `   💳 Pagamento: À vista no ${formatCurrency(itemTotal)}\n\n`
+        }
       }
     })
 
-    if (armacao.referencia) {
-      msg += `*👓 Armação:* ${armacao.referencia}\n\n`
-    }
-
     msg += `━━━━━━━━━━━━━━━━━━\n`
-    msg += `*💰 Total: ${formatCurrency(total)}*\n`
     msg += `*Oticas Paris Sul*\n`
-
-    if (parcelas > 1) {
-      msg += `*💳 Pagamento:* ${parcelas}x de ${formatCurrency(total / parcelas)} sem juros\n`
-    } else {
-      msg += `*💳 Pagamento:* À vista no ${formatCurrency(total)}\n`
-    }
 
     if (observacoes) {
       msg += `\n📝 *Obs:* ${observacoes}\n`
     }
+
+    // Save first
+    await handleSave('enviado')
 
     // Clean phone number for URL
     const phone = cliente.telefone?.replace(/\D/g, '') || ''
@@ -709,7 +749,7 @@ export default function NovoOrcamento() {
 
               {/* AR Selection */}
               {item.lenteId && (
-                <div>
+                <div style={{ marginBottom: '16px' }}>
                   <label className="form-label">Antirreflexo</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {getAROptions(item).map(ar => (
@@ -736,41 +776,82 @@ export default function NovoOrcamento() {
                   </div>
                 </div>
               )}
+
+              {/* Frame & Pricing Config */}
+              {item.lenteId && (
+                <div style={{
+                  marginTop: '20px',
+                  paddingTop: '20px',
+                  borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-primary)' }}>
+                    <span style={{ fontSize: '16px' }}>👓</span>
+                    <span style={{ fontWeight: 600, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Armação & Condições (Opção {idx + 1})
+                    </span>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ fontSize: '11px' }}>Modelo da Armação</label>
+                      <input
+                        className="form-input"
+                        placeholder="Ex: Ray-Ban RB3025"
+                        value={item.armacao?.referencia || ''}
+                        onChange={e => handleItemArmacaoChange(idx, 'referencia', e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ fontSize: '11px' }}>Preço da Armação (R$)</label>
+                      <input
+                        className="form-input"
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={item.armacao?.preco || ''}
+                        onChange={e => handleItemArmacaoChange(idx, 'preco', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ fontSize: '11px' }}>Desconto (R$)</label>
+                      <input
+                        className="form-input"
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={item.desconto || ''}
+                        onChange={e => handleItemChange(idx, 'desconto', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ fontSize: '11px' }}>Parcelas</label>
+                      <select
+                        className="form-select"
+                        value={item.parcelas || 1}
+                        onChange={e => handleItemChange(idx, 'parcelas', parseInt(e.target.value))}
+                      >
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                          <option key={n} value={n}>
+                            {n === 1 ? 'À vista' : `${n}x sem juros`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
 
           <button className="btn btn-secondary" onClick={addItem} style={{ alignSelf: 'flex-start' }}>
             <Plus size={16} /> Adicionar Opção
           </button>
-
-          {/* Frame Info */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">👓 Dados da Armação (Opcional)</h3>
-            </div>
-            <div className="form-row">
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Referência / Modelo</label>
-                <input
-                  className="form-input"
-                  placeholder="Ex: Ray-Ban RB3025"
-                  value={armacao.referencia}
-                  onChange={e => setArmacao(prev => ({ ...prev, referencia: e.target.value }))}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Preço da Armação</label>
-                <input
-                  className="form-input"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={armacao.preco || ''}
-                  onChange={e => setArmacao(prev => ({ ...prev, preco: parseFloat(e.target.value) || 0 }))}
-                />
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Summary Sidebar */}
@@ -778,87 +859,58 @@ export default function NovoOrcamento() {
           <div className="card" style={{ background: 'var(--gradient-card)' }}>
             <h3 className="card-title" style={{ marginBottom: '20px' }}>💰 Resumo</h3>
 
-            {itens.map((item, idx) => (
-              <div key={idx} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                padding: '8px 0',
-                borderBottom: '1px solid var(--border-color)',
-                fontSize: '14px',
-              }}>
-                <span style={{ color: 'var(--text-secondary)' }}>
-                  Opção {idx + 1}
-                </span>
-                <span style={{ fontWeight: 600 }}>
-                  {item.preco ? formatCurrency(item.preco) : '-'}
-                </span>
-              </div>
-            ))}
+            {itens.map((item, idx) => {
+              const itemTotal = calculateItemTotal(item)
+              return (
+                <div key={idx} style={{
+                  padding: '12px 0',
+                  borderBottom: idx < itens.length - 1 ? '1px solid var(--border-color)' : 'none',
+                  fontSize: '14px',
+                }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                    Opção {idx + 1}
+                  </div>
+                  
+                  {item.preco > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                      <span>Lente</span>
+                      <span>{formatCurrency(item.preco)}</span>
+                    </div>
+                  )}
 
-            {armacao.preco > 0 && (
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                padding: '8px 0',
-                borderBottom: '1px solid var(--border-color)',
-                fontSize: '14px',
-              }}>
-                <span style={{ color: 'var(--text-secondary)' }}>
-                  Armação {armacao.referencia ? `(${armacao.referencia})` : ''}
-                </span>
-                <span style={{ fontWeight: 600 }}>
-                  {formatCurrency(armacao.preco)}
-                </span>
-              </div>
-            )}
+                  {item.armacao?.preco > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                      <span>Armação {item.armacao.referencia ? `(${item.armacao.referencia})` : ''}</span>
+                      <span>{formatCurrency(item.armacao.preco)}</span>
+                    </div>
+                  )}
 
-            <div style={{ marginTop: '16px' }}>
-              <label className="form-label" style={{ fontSize: '12px', marginBottom: '4px' }}>Desconto (R$)</label>
-              <input
-                className="form-input"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={desconto || ''}
-                onChange={e => setDesconto(parseFloat(e.target.value) || 0)}
-                style={{ height: '36px', fontSize: '14px' }}
-              />
-            </div>
+                  {item.desconto > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--accent-red)', marginBottom: '4px' }}>
+                      <span>Desconto</span>
+                      <span>-{formatCurrency(item.desconto)}</span>
+                    </div>
+                  )}
 
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              padding: '16px 0 0',
-              fontSize: '18px',
-              fontWeight: 700,
-            }}>
-              <span>Total</span>
-              <span style={{ color: 'var(--accent-green)' }}>
-                {formatCurrency(total)}
-              </span>
-            </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '15px', marginTop: '8px', color: 'var(--accent-green)' }}>
+                    <span>Subtotal</span>
+                    <span>{formatCurrency(itemTotal)}</span>
+                  </div>
 
-            <div className="divider" />
-
-            <div className="form-group">
-              <label className="form-label">Condições de Pagamento</label>
-              <select
-                className="form-select"
-                value={parcelas}
-                onChange={e => setParcelas(parseInt(e.target.value))}
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                  <option key={n} value={n}>
-                    {n === 1 ? 'À vista' : `${n}x sem juros`}
-                  </option>
-                ))}
-              </select>
-              {parcelas > 1 && (
-                <div style={{ fontSize: '13px', marginTop: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                  {parcelas}x de {formatCurrency(total / parcelas)}
+                  {(item.parcelas || 1) > 1 ? (
+                    <div style={{ fontSize: '11px', textAlign: 'right', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      {item.parcelas}x de {formatCurrency(itemTotal / item.parcelas)} sem juros
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '11px', textAlign: 'right', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      À vista
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              )
+            })}
+
+            <div className="divider" style={{ margin: '16px 0' }} />
 
             <div className="form-group">
               <label className="form-label">Observações</label>
