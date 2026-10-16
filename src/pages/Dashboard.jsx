@@ -5,6 +5,7 @@ import {
   PlusCircle, ArrowRight, Clock
 } from 'lucide-react'
 import { getLentes, getOrcamentos, formatCurrency } from '../services/dataStore'
+import { ContactLensQuoteIcon } from '../components/ContactLensIcons'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -52,6 +53,16 @@ export default function Dashboard() {
             >
               <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <FileText size={20} /> Novo Orçamento
+              </span>
+              <ArrowRight size={18} />
+            </button>
+            <button
+              className="btn btn-secondary btn-lg"
+              style={{ width: '100%', justifyContent: 'space-between' }}
+              onClick={() => navigate('/novo-orcamento-contato')}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <ContactLensQuoteIcon size={20} /> Orçamento Lentes de Contato
               </span>
               <ArrowRight size={18} />
             </button>
