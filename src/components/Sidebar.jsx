@@ -9,10 +9,13 @@ import {
   Calculator,
   ChevronLeft,
   ChevronRight,
-  X,
-  Eye,
-  Activity
+  X
 } from 'lucide-react'
+import {
+  ContactLensCasePlusIcon,
+  ContactLensCaseIcon,
+  ContactLensQuoteIcon
+} from './ContactLensIcons'
 
 const navItems = [
   {
@@ -32,9 +35,9 @@ const navItems = [
   {
     section: 'Lentes de Contato',
     items: [
-      { path: '/cadastro-lentes-contato', icon: PlusCircle, label: 'Cadastrar Contato' },
-      { path: '/catalogo-contato', icon: Glasses, label: 'Catálogo Contato' },
-      { path: '/novo-orcamento-contato', icon: Activity, label: 'Orçamento Contato' },
+      { path: '/cadastro-lentes-contato', icon: ContactLensCasePlusIcon, label: 'Cadastrar Contato' },
+      { path: '/catalogo-contato', icon: ContactLensCaseIcon, label: 'Catálogo Contato' },
+      { path: '/novo-orcamento-contato', icon: ContactLensQuoteIcon, label: 'Orçamento Contato' },
     ]
   },
   {
