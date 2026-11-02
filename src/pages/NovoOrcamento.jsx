@@ -3,7 +3,7 @@ import {
   Plus, Trash2, Save, Send, Search, Camera, ClipboardCheck, Loader2
 } from 'lucide-react'
 import { extractTextFromImage, parsePrescriptionText } from '../services/ocrService'
-import { sanitizeNumericInput, roundToDiopterStep, formatDiopter } from '../services/numericUtils'
+import { sanitizeNumericInput, roundToDiopterStep, formatDiopter, processDiopterValue } from '../services/numericUtils'
 import GrauInput from '../components/GrauInput'
 
 import { useToast } from '../contexts/ToastContext'
@@ -350,18 +350,25 @@ export default function NovoOrcamento() {
       }
 
       const isEixo = field === 'eixo'
-      const num = parseFloat(val)
-      if (isNaN(num)) return prev
+      if (isEixo) {
+        const num = parseFloat(val)
+        if (isNaN(num)) return prev
+        const rounded = Math.round(num)
+        const formatted = formatDiopter(rounded, true)
+        if (prev[eye][field] === formatted) return prev
+        return {
+          ...prev,
+          [eye]: { ...prev[eye], [field]: formatted }
+        }
+      }
 
-      // Arredonda para o passo de 0.25 (exceto eixo que é inteiro)
-      const rounded = isEixo ? Math.round(num) : roundToDiopterStep(num)
-      const formatted = formatDiopter(rounded, isEixo)
-
-      if (prev[eye][field] === formatted) return prev
+      // Dioptrias (esférico, cilíndrico, adição)
+      const res = processDiopterValue(val, null, true)
+      if (prev[eye][field] === res.formatted) return prev
 
       return {
         ...prev,
-        [eye]: { ...prev[eye], [field]: formatted }
+        [eye]: { ...prev[eye], [field]: res.formatted }
       }
     })
   }

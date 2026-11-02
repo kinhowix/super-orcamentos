@@ -3,7 +3,7 @@ import { Plus, Trash2, Save, Send, Search } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { getLentesContato, saveOrcamento, formatCurrency } from '../services/dataStore';
 import { convertPrescriptionToContactLens } from '../services/contactLensCalculations';
-import { sanitizeNumericInput, roundToDiopterStep, formatDiopter } from '../services/numericUtils';
+import { sanitizeNumericInput, roundToDiopterStep, formatDiopter, processDiopterValue } from '../services/numericUtils';
 import GrauInput from '../components/GrauInput';
 
 const EMPTY_ITEM = {
@@ -61,17 +61,25 @@ export default function NovoOrcamentoContato() {
       }
       
       const isEixo = field === 'eixo';
-      const num = parseFloat(val);
-      if (isNaN(num)) return prev;
+      if (isEixo) {
+        const num = parseFloat(val);
+        if (isNaN(num)) return prev;
+        const rounded = Math.round(num);
+        const formatted = formatDiopter(rounded, true);
+        if (prev[eye][field] === formatted) return prev;
+        return {
+          ...prev,
+          [eye]: { ...prev[eye], [field]: formatted }
+        };
+      }
 
-      const rounded = isEixo ? Math.round(num) : roundToDiopterStep(num);
-      const formatted = formatDiopter(rounded, isEixo);
-
-      if (prev[eye][field] === formatted) return prev;
+      // Dioptrias (esférico, cilíndrico, adição)
+      const res = processDiopterValue(val, null, true);
+      if (prev[eye][field] === res.formatted) return prev;
 
       return {
         ...prev,
-        [eye]: { ...prev[eye], [field]: formatted }
+        [eye]: { ...prev[eye], [field]: res.formatted }
       };
     });
   };

@@ -60,6 +60,84 @@ export function sanitizeNumericInput(value, maxDecimals = 2, min = null, max = n
 }
 
 /**
+ * Interpreta entradas numéricas rápidas (sem pontuação) e converte para dioptrias.
+ * Exemplos:
+ *   - '200' -> 2.00
+ *   - '20'  -> 2.00
+ *   - '25'  -> 2.50
+ *   - '10'  -> 1.00
+ *   - '15'  -> 1.50
+ *   - '12'  -> 12.00 (grau inteiro direto de 2 dígitos)
+ *   - '255' -> 2.55 (será validado para múltiplo de 0.25)
+ *   - '1000' -> 10.00
+ *   - '2.5' -> 2.50
+ * @param {string|number} value
+ * @returns {number}
+ */
+export function parseDiopterShorthand(value) {
+  if (value === undefined || value === null) return 0;
+  
+  const str = String(value).trim().replace(',', '.');
+  if (!str) return 0;
+  
+  // Se já contém ponto decimal explícito (ex: "2.5", "2.25", "12.0")
+  if (str.includes('.')) {
+    const num = parseFloat(str);
+    return isNaN(num) ? 0 : num;
+  }
+  
+  const digits = str.replace(/\D/g, '');
+  if (!digits) return 0;
+  
+  const len = digits.length;
+  
+  if (len === 1) {
+    // 1 dígito: "2" -> 2.00, "5" -> 5.00
+    return parseFloat(digits);
+  }
+  
+  if (len === 2) {
+    // Caso especial "75" -> 0.75 (em óptica clínica, "grau 75" é 0.75)
+    if (digits === '75') {
+      return 0.75;
+    }
+    
+    // Começa com '0' (ex: "05" -> 0.50)
+    if (digits.startsWith('0')) {
+      return parseFloat(digits) / 10;
+    }
+    
+    // Termina em '0' ou '5' (ex: "20" -> 2.00, "25" -> 2.50, "10" -> 1.00, "15" -> 1.50)
+    if (digits.endsWith('0') || digits.endsWith('5')) {
+      return parseFloat(digits) / 10;
+    }
+    
+    // Demais números de 2 dígitos (ex: "11", "12", "13", "14", "16", "18", "21")
+    // Tratados como dioptrias inteiras diretas (ex: "12" -> 12.00)
+    return parseFloat(digits);
+  }
+  
+  if (len === 3) {
+    // 3 dígitos: divide por 100 (ex: "200" -> 2.00, "225" -> 2.25, "250" -> 2.50, "255" -> 2.55, "075" -> 0.75)
+    return parseFloat(digits) / 100;
+  }
+  
+  // 4 ou mais dígitos (ex: "1000" -> 10.00, "1050" -> 10.50, "1200" -> 12.00, "1250" -> 12.50)
+  return parseFloat(digits) / 100;
+}
+
+/**
+ * Verifica se um valor de dioptria é múltiplo exato de 0.25 (.00, .25, .50, .75).
+ * @param {number} num 
+ * @returns {boolean}
+ */
+export function isValidDiopterStep(num) {
+  if (isNaN(num)) return false;
+  const remainder = Math.abs(num * 4 - Math.round(num * 4));
+  return remainder < 0.0001;
+}
+
+/**
  * Rounds a diopter value to the nearest 0.25 step.
  * @param {number|string} value - The value to round.
  * @returns {number} The rounded value.
@@ -70,6 +148,79 @@ export function roundToDiopterStep(value) {
   
   // Multiply by 4 to bring 0.25 to 1.0, round to integer, then divide by 4
   return Math.round(num * 4) / 4;
+}
+
+/**
+ * Processa uma entrada de dioptria completa:
+ * - Interpreta atalhos numéricos sem separador
+ * - Valida se é múltiplo de 0.25
+ * - Ajusta para o múltiplo mais próximo se inválido (ex: 2.55 -> 2.50)
+ * - Formata com 2 casas decimais e preserva o sinal (+ / -)
+ * 
+ * @param {string|number} rawValue - Valor digitado
+ * @param {boolean|null} isNegativeOverride - Se especificado, força sinal negativo ou positivo
+ * @param {boolean} includeSign - Se true, inclui '+' para positivos (padrão em receitas: formatDiopter)
+ * @returns {{
+ *   formatted: string,
+ *   numericValue: number,
+ *   wasAdjusted: boolean,
+ *   adjustedFrom: string,
+ *   originalRaw: string
+ * }}
+ */
+export function processDiopterValue(rawValue, isNegativeOverride = null, includeSign = false) {
+  if (rawValue === undefined || rawValue === null) {
+    return { formatted: '', numericValue: 0, wasAdjusted: false, adjustedFrom: '', originalRaw: '' };
+  }
+
+  const rawStr = String(rawValue).trim();
+  if (rawStr === '' || rawStr === '-' || rawStr === '+') {
+    return { formatted: '', numericValue: 0, wasAdjusted: false, adjustedFrom: '', originalRaw: rawStr };
+  }
+
+  // Determina o sinal negativo
+  let isNegative = false;
+  if (isNegativeOverride !== null) {
+    isNegative = Boolean(isNegativeOverride);
+  } else if (rawStr.startsWith('-')) {
+    isNegative = true;
+  }
+
+  // Remove sinais da string para processamento da magnitude
+  const magnitudeStr = rawStr.replace(/^[+-]/, '').trim();
+  
+  // Interpreta atalhos e obtém valor numérico
+  const parsedMagnitude = parseDiopterShorthand(magnitudeStr);
+  
+  // Valida múltiplo de 0.25
+  const isValid = isValidDiopterStep(parsedMagnitude);
+  let finalMagnitude = parsedMagnitude;
+  let wasAdjusted = false;
+  let adjustedFrom = '';
+
+  if (!isValid) {
+    finalMagnitude = roundToDiopterStep(parsedMagnitude);
+    wasAdjusted = true;
+    adjustedFrom = parsedMagnitude.toFixed(2);
+  }
+
+  const formattedMag = finalMagnitude.toFixed(2);
+  const numericValue = isNegative ? -finalMagnitude : finalMagnitude;
+  
+  let formatted = formattedMag;
+  if (isNegative) {
+    formatted = `-${formattedMag}`;
+  } else if (includeSign && finalMagnitude > 0) {
+    formatted = `+${formattedMag}`;
+  }
+
+  return {
+    formatted,
+    numericValue,
+    wasAdjusted,
+    adjustedFrom,
+    originalRaw: rawStr
+  };
 }
 
 /**
