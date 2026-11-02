@@ -598,7 +598,7 @@ export default function NovoOrcamento() {
 
             <div style={{ marginBottom: '16px' }}>
               <label className="form-label" style={{ fontWeight: 600 }}>Olho Direito (OD)</label>
-              <div className="form-row" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+              <div className="form-row receita-grid">
                 <div>
                   <label className="form-label" style={{ fontSize: '11px' }}>Esférico</label>
                   <input
@@ -652,7 +652,7 @@ export default function NovoOrcamento() {
 
             <div>
               <label className="form-label" style={{ fontWeight: 600 }}>Olho Esquerdo (OE)</label>
-              <div className="form-row" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+              <div className="form-row receita-grid">
                 <div>
                   <label className="form-label" style={{ fontSize: '11px' }}>Esférico</label>
                   <input
