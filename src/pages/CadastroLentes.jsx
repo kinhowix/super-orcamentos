@@ -13,6 +13,7 @@ import {
 } from '../services/dataStore'
 import { extractPDFStructured } from '../services/pdfParser'
 import { sanitizeNumericInput } from '../services/numericUtils'
+import GrauInput from '../components/GrauInput'
 
 // AR levels predefinidos por marca conhecida
 const AR_PREDEFINIDOS = {
@@ -988,35 +989,29 @@ function ManualForm({
         <div className="form-row" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
           <div className="form-group">
             <label className="form-label" style={{ fontSize: '11px' }}>Esférico Mín</label>
-            <input
-              className="form-input"
-              type="number"
-              step="0.25"
+            <GrauInput
               placeholder="-10.00"
+              defaultNegative={true}
               value={lente.especificacoes.esferico_min}
-              onChange={e => onSpecChange('esferico_min', e.target.value)}
+              onChange={val => onSpecChange('esferico_min', val)}
             />
           </div>
           <div className="form-group">
             <label className="form-label" style={{ fontSize: '11px' }}>Esférico Máx</label>
-            <input
-              className="form-input"
-              type="number"
-              step="0.25"
+            <GrauInput
               placeholder="+6.00"
+              defaultNegative={false}
               value={lente.especificacoes.esferico_max}
-              onChange={e => onSpecChange('esferico_max', e.target.value)}
+              onChange={val => onSpecChange('esferico_max', val)}
             />
           </div>
           <div className="form-group">
             <label className="form-label" style={{ fontSize: '11px' }}>Cilindro Máx</label>
-            <input
-              className="form-input"
-              type="number"
-              step="0.25"
+            <GrauInput
               placeholder="-4.00"
+              defaultNegative={true}
               value={lente.especificacoes.cilindro_max}
-              onChange={e => onSpecChange('cilindro_max', e.target.value)}
+              onChange={val => onSpecChange('cilindro_max', val)}
             />
           </div>
           <div className="form-group">
@@ -1460,36 +1455,33 @@ function LoteForm({
                   </td>
                 ))}
                 <td>
-                  <input
-                    className="form-input"
-                    type="number"
-                    step="0.25"
+                  <GrauInput
+                    className="form-input-sm"
                     placeholder="-10"
+                    defaultNegative={true}
                     value={item.esferico_min}
-                    onChange={e => onLoteChange(idx, 'esferico_min', e.target.value)}
-                    style={{ minWidth: '70px' }}
+                    onChange={val => onLoteChange(idx, 'esferico_min', val)}
+                    style={{ minWidth: '95px' }}
                   />
                 </td>
                 <td>
-                  <input
-                    className="form-input"
-                    type="number"
-                    step="0.25"
+                  <GrauInput
+                    className="form-input-sm"
                     placeholder="+6"
+                    defaultNegative={false}
                     value={item.esferico_max}
-                    onChange={e => onLoteChange(idx, 'esferico_max', e.target.value)}
-                    style={{ minWidth: '70px' }}
+                    onChange={val => onLoteChange(idx, 'esferico_max', val)}
+                    style={{ minWidth: '95px' }}
                   />
                 </td>
                 <td>
-                  <input
-                    className="form-input"
-                    type="number"
-                    step="0.25"
+                  <GrauInput
+                    className="form-input-sm"
                     placeholder="-4"
+                    defaultNegative={true}
                     value={item.cilindro_max}
-                    onChange={e => onLoteChange(idx, 'cilindro_max', e.target.value)}
-                    style={{ minWidth: '70px' }}
+                    onChange={val => onLoteChange(idx, 'cilindro_max', val)}
+                    style={{ minWidth: '95px' }}
                   />
                 </td>
                 {loteTipo === 'multifocal' && (

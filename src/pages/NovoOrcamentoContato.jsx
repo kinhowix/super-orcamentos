@@ -4,6 +4,7 @@ import { useToast } from '../contexts/ToastContext';
 import { getLentesContato, saveOrcamento, formatCurrency } from '../services/dataStore';
 import { convertPrescriptionToContactLens } from '../services/contactLensCalculations';
 import { sanitizeNumericInput, roundToDiopterStep, formatDiopter } from '../services/numericUtils';
+import GrauInput from '../components/GrauInput';
 
 const EMPTY_ITEM = {
   lenteId: '',
@@ -54,7 +55,10 @@ export default function NovoOrcamentoContato() {
   const handleReceitaBlur = (eye, field) => {
     setReceita(prev => {
       const val = prev[eye][field];
-      if (!val || val === '-' || val === '+') return prev;
+      if (!val) return prev;
+      if (val === '-' || val === '+') {
+        return { ...prev, [eye]: { ...prev[eye], [field]: '' } };
+      }
       
       const isEixo = field === 'eixo';
       const num = parseFloat(val);
@@ -417,17 +421,31 @@ export default function NovoOrcamentoContato() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
                 <h4 style={{ fontSize: '14px', marginBottom: '8px' }}>Grau Inserido</h4>
+                <div className="grau-mobile-tip">
+                  <span>💡 Dica: Toque no botão <strong>+</strong> ou <strong>−</strong> ao lado do campo para alternar o sinal no celular.</span>
+                </div>
                 {/* OD Inputs */}
                 <div style={{ marginBottom: '16px' }}>
                   <label className="form-label" style={{ fontWeight: 600 }}>Olho Direito (OD)</label>
                   <div className="form-row receita-grid">
                     <div>
                       <label className="form-label" style={{ fontSize: '11px' }}>Esférico</label>
-                      <input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.od.esferico} onChange={e => handleReceitaChange('od', 'esferico', e.target.value)} onBlur={() => handleReceitaBlur('od', 'esferico')} />
+                      <GrauInput
+                        placeholder="0.00"
+                        value={receita.od.esferico}
+                        onChange={val => handleReceitaChange('od', 'esferico', val)}
+                        onBlur={() => handleReceitaBlur('od', 'esferico')}
+                      />
                     </div>
                     <div>
                       <label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label>
-                      <input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.od.cilindro} onChange={e => handleReceitaChange('od', 'cilindro', e.target.value)} onBlur={() => handleReceitaBlur('od', 'cilindro')} />
+                      <GrauInput
+                        placeholder="0.00"
+                        defaultNegative={true}
+                        value={receita.od.cilindro}
+                        onChange={val => handleReceitaChange('od', 'cilindro', val)}
+                        onBlur={() => handleReceitaBlur('od', 'cilindro')}
+                      />
                     </div>
                     <div>
                       <label className="form-label" style={{ fontSize: '11px' }}>Eixo</label>
@@ -445,11 +463,22 @@ export default function NovoOrcamentoContato() {
                   <div className="form-row receita-grid">
                     <div>
                       <label className="form-label" style={{ fontSize: '11px' }}>Esférico</label>
-                      <input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.oe.esferico} onChange={e => handleReceitaChange('oe', 'esferico', e.target.value)} onBlur={() => handleReceitaBlur('oe', 'esferico')} />
+                      <GrauInput
+                        placeholder="0.00"
+                        value={receita.oe.esferico}
+                        onChange={val => handleReceitaChange('oe', 'esferico', val)}
+                        onBlur={() => handleReceitaBlur('oe', 'esferico')}
+                      />
                     </div>
                     <div>
                       <label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label>
-                      <input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.oe.cilindro} onChange={e => handleReceitaChange('oe', 'cilindro', e.target.value)} onBlur={() => handleReceitaBlur('oe', 'cilindro')} />
+                      <GrauInput
+                        placeholder="0.00"
+                        defaultNegative={true}
+                        value={receita.oe.cilindro}
+                        onChange={val => handleReceitaChange('oe', 'cilindro', val)}
+                        onBlur={() => handleReceitaBlur('oe', 'cilindro')}
+                      />
                     </div>
                     <div>
                       <label className="form-label" style={{ fontSize: '11px' }}>Eixo</label>

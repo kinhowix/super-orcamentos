@@ -5,6 +5,7 @@ import { useToast } from '../contexts/ToastContext';
 import {
   saveLenteContato, getLenteContatoById, getMarcasContato, addMarcaContato
 } from '../services/dataStore';
+import GrauInput from '../components/GrauInput';
 
 const EMPTY_LENTE_CONTATO = {
   marca: '',
@@ -257,19 +258,19 @@ export default function CadastroLentesContato() {
           <div className="form-row" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
             <div className="form-group">
               <label className="form-label">Miopia Mínima</label>
-              <input className="form-input" type="number" step="0.25" placeholder="-0.25" value={lente.miopia_min} onChange={e => handleFieldChange('miopia_min', e.target.value)} />
+              <GrauInput placeholder="-0.25" defaultNegative={true} value={lente.miopia_min} onChange={v => handleFieldChange('miopia_min', v)} />
             </div>
             <div className="form-group">
               <label className="form-label">Miopia Máxima</label>
-              <input className="form-input" type="number" step="0.25" placeholder="-12.00" value={lente.miopia_max} onChange={e => handleFieldChange('miopia_max', e.target.value)} />
+              <GrauInput placeholder="-12.00" defaultNegative={true} value={lente.miopia_max} onChange={v => handleFieldChange('miopia_max', v)} />
             </div>
             <div className="form-group">
               <label className="form-label">Hipermetropia Mínima</label>
-              <input className="form-input" type="number" step="0.25" placeholder="+0.25" value={lente.hiper_min} onChange={e => handleFieldChange('hiper_min', e.target.value)} />
+              <GrauInput placeholder="+0.25" defaultNegative={false} value={lente.hiper_min} onChange={v => handleFieldChange('hiper_min', v)} />
             </div>
             <div className="form-group">
               <label className="form-label">Hipermetropia Máxima</label>
-              <input className="form-input" type="number" step="0.25" placeholder="+8.00" value={lente.hiper_max} onChange={e => handleFieldChange('hiper_max', e.target.value)} />
+              <GrauInput placeholder="+8.00" defaultNegative={false} value={lente.hiper_max} onChange={v => handleFieldChange('hiper_max', v)} />
             </div>
           </div>
           
