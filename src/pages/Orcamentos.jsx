@@ -258,13 +258,9 @@ export default function Orcamentos() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {filtered.map(orc => (
-            <div key={orc.id} className="card" style={{ padding: '16px 24px' }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div key={orc.id} className="card" style={{ padding: '16px 20px' }}>
+              <div className="orcamento-card-row">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
                   <div style={{
                     width: '44px',
                     height: '44px',
@@ -278,25 +274,19 @@ export default function Orcamentos() {
                   }}>
                     {orc.cliente?.nome?.[0]?.toUpperCase() || '?'}
                   </div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '16px' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {orc.cliente?.nome || 'Sem nome'}
                     </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '13px', display: 'flex', gap: '12px' }}>
-
+                    <div style={{ color: 'var(--text-muted)', fontSize: '13px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <span>{new Date(orc.createdAt).toLocaleDateString('pt-BR')}</span>
-                      {orc.cliente?.telefone && (
-                        <>
-
-                        </>
-                      )}
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ textAlign: 'right', marginRight: '8px' }}>
-                    <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--accent-green)' }}>
+                <div className="orcamento-card-actions">
+                  <div style={{ textAlign: 'right', marginRight: '4px' }}>
+                    <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--accent-green)' }}>
                       {formatCurrency(orc.total || 0)}
                     </div>
                     <StatusBadge status={orc.status} />
