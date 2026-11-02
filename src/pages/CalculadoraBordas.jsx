@@ -12,6 +12,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { MATERIALS, calculateLensThickness, getPowerAtMeridian, calculateSagitta } from '../services/lensCalculations';
+import GrauInput from '../components/GrauInput';
 
 const INITIAL_RX = {
   sphere: 0.00,
@@ -105,18 +106,20 @@ export default function CalculadoraBordas() {
             <div className="grid grid-cols-2 gap-4">
               <div className="form-group">
                 <label className="form-label">Esférico</label>
-                <input 
-                  type="number" step="0.25" className="form-input" 
+                <GrauInput 
                   value={activeRx.sphere} 
-                  onChange={(e) => handleRxChange(selectedEye, 'sphere', e.target.value)}
+                  defaultNegative={true}
+                  placeholder="0.00"
+                  onChange={(val) => handleRxChange(selectedEye, 'sphere', val)}
                 />
               </div>
               <div className="form-group">
                 <label className="form-label">Cilíndrico</label>
-                <input 
-                  type="number" step="0.25" className="form-input" 
+                <GrauInput 
                   value={activeRx.cylinder} 
-                  onChange={(e) => handleRxChange(selectedEye, 'cylinder', e.target.value)}
+                  defaultNegative={true}
+                  placeholder="0.00"
+                  onChange={(val) => handleRxChange(selectedEye, 'cylinder', val)}
                 />
               </div>
               <div className="form-group">

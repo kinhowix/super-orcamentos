@@ -4,6 +4,7 @@ import {
 } from 'lucide-react'
 import { extractTextFromImage, parsePrescriptionText } from '../services/ocrService'
 import { sanitizeNumericInput, roundToDiopterStep, formatDiopter } from '../services/numericUtils'
+import GrauInput from '../components/GrauInput'
 
 import { useToast } from '../contexts/ToastContext'
 import {
@@ -343,7 +344,10 @@ export default function NovoOrcamento() {
   const handleReceitaBlur = (eye, field) => {
     setReceita(prev => {
       const val = prev[eye][field]
-      if (!val || val === '-' || val === '+') return prev
+      if (!val) return prev
+      if (val === '-' || val === '+') {
+        return { ...prev, [eye]: { ...prev[eye], [field]: '' } }
+      }
 
       const isEixo = field === 'eixo'
       const num = parseFloat(val)
@@ -596,30 +600,29 @@ export default function NovoOrcamento() {
               </label>
             </div>
 
+            <div className="grau-mobile-tip">
+              <span>💡 Dica: Toque no botão <strong>+</strong> ou <strong>−</strong> ao lado do campo para alternar o sinal no celular.</span>
+            </div>
+
             <div style={{ marginBottom: '16px' }}>
               <label className="form-label" style={{ fontWeight: 600 }}>Olho Direito (OD)</label>
               <div className="form-row receita-grid">
                 <div>
                   <label className="form-label" style={{ fontSize: '11px' }}>Esférico</label>
-                  <input
-                    className="form-input"
-                    type="text"
-                    inputMode="decimal"
+                  <GrauInput
                     placeholder="0.00"
                     value={receita.od.esferico}
-                    onChange={e => handleReceitaChange('od', 'esferico', e.target.value)}
+                    onChange={val => handleReceitaChange('od', 'esferico', val)}
                     onBlur={() => handleReceitaBlur('od', 'esferico')}
                   />
                 </div>
                 <div>
                   <label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label>
-                  <input
-                    className="form-input"
-                    type="text"
-                    inputMode="decimal"
+                  <GrauInput
                     placeholder="0.00"
+                    defaultNegative={true}
                     value={receita.od.cilindro}
-                    onChange={e => handleReceitaChange('od', 'cilindro', e.target.value)}
+                    onChange={val => handleReceitaChange('od', 'cilindro', val)}
                     onBlur={() => handleReceitaBlur('od', 'cilindro')}
                   />
                 </div>
@@ -655,25 +658,20 @@ export default function NovoOrcamento() {
               <div className="form-row receita-grid">
                 <div>
                   <label className="form-label" style={{ fontSize: '11px' }}>Esférico</label>
-                  <input
-                    className="form-input"
-                    type="text"
-                    inputMode="decimal"
+                  <GrauInput
                     placeholder="0.00"
                     value={receita.oe.esferico}
-                    onChange={e => handleReceitaChange('oe', 'esferico', e.target.value)}
+                    onChange={val => handleReceitaChange('oe', 'esferico', val)}
                     onBlur={() => handleReceitaBlur('oe', 'esferico')}
                   />
                 </div>
                 <div>
                   <label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label>
-                  <input
-                    className="form-input"
-                    type="text"
-                    inputMode="decimal"
+                  <GrauInput
                     placeholder="0.00"
+                    defaultNegative={true}
                     value={receita.oe.cilindro}
-                    onChange={e => handleReceitaChange('oe', 'cilindro', e.target.value)}
+                    onChange={val => handleReceitaChange('oe', 'cilindro', val)}
                     onBlur={() => handleReceitaBlur('oe', 'cilindro')}
                   />
                 </div>
@@ -1149,29 +1147,35 @@ export default function NovoOrcamento() {
 
               <div className="ocr-result-row">
                 <div className="ocr-result-eye">Esférico</div>
-                <input
+                <GrauInput
                   className="ocr-result-input"
+                  placeholder="0.00"
                   value={ocrResult?.od.esferico}
-                  onChange={e => setOcrResult(prev => ({ ...prev, od: { ...prev.od, esferico: e.target.value } }))}
+                  onChange={val => setOcrResult(prev => ({ ...prev, od: { ...prev.od, esferico: val } }))}
                 />
-                <input
+                <GrauInput
                   className="ocr-result-input"
+                  placeholder="0.00"
                   value={ocrResult?.oe.esferico}
-                  onChange={e => setOcrResult(prev => ({ ...prev, oe: { ...prev.oe, esferico: e.target.value } }))}
+                  onChange={val => setOcrResult(prev => ({ ...prev, oe: { ...prev.oe, esferico: val } }))}
                 />
               </div>
 
               <div className="ocr-result-row">
                 <div className="ocr-result-eye">Cilíndrico</div>
-                <input
+                <GrauInput
                   className="ocr-result-input"
+                  placeholder="0.00"
+                  defaultNegative={true}
                   value={ocrResult?.od.cilindro}
-                  onChange={e => setOcrResult(prev => ({ ...prev, od: { ...prev.od, cilindro: e.target.value } }))}
+                  onChange={val => setOcrResult(prev => ({ ...prev, od: { ...prev.od, cilindro: val } }))}
                 />
-                <input
+                <GrauInput
                   className="ocr-result-input"
+                  placeholder="0.00"
+                  defaultNegative={true}
                   value={ocrResult?.oe.cilindro}
-                  onChange={e => setOcrResult(prev => ({ ...prev, oe: { ...prev.oe, cilindro: e.target.value } }))}
+                  onChange={val => setOcrResult(prev => ({ ...prev, oe: { ...prev.oe, cilindro: val } }))}
                 />
               </div>
 
@@ -1215,4 +1219,3 @@ export default function NovoOrcamento() {
     </div>
   )
 }
-
