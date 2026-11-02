@@ -403,13 +403,13 @@ export default function NovoOrcamentoContato() {
 
           {/* Receita */}
           <div className="card">
-            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="card-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
               <h3 className="card-title">📝 Receita</h3>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <span style={{ fontSize: '14px', fontWeight: 500 }}>Tipo de Receita:</span>
-                <select className="form-select" style={{ width: 'auto' }} value={tipoReceita} onChange={e => setTipoReceita(e.target.value)}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>Tipo:</span>
+                <select className="form-select" style={{ width: 'auto', minWidth: '160px' }} value={tipoReceita} onChange={e => setTipoReceita(e.target.value)}>
                   <option value="oculos">Óculos (Calcula Vértice)</option>
-                  <option value="contato">Lente de Contato (Digitação Direta)</option>
+                  <option value="contato">Lente de Contato (Direto)</option>
                 </select>
               </div>
             </div>
@@ -420,45 +420,71 @@ export default function NovoOrcamentoContato() {
                 {/* OD Inputs */}
                 <div style={{ marginBottom: '16px' }}>
                   <label className="form-label" style={{ fontWeight: 600 }}>Olho Direito (OD)</label>
-                  <div className="form-row" style={{ gridTemplateColumns: 'repeat(4, minmax(60px, 1fr))' }}>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Esférico</label><input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.od.esferico} onChange={e => handleReceitaChange('od', 'esferico', e.target.value)} onBlur={() => handleReceitaBlur('od', 'esferico')} /></div>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label><input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.od.cilindro} onChange={e => handleReceitaChange('od', 'cilindro', e.target.value)} onBlur={() => handleReceitaBlur('od', 'cilindro')} /></div>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Eixo</label><input className="form-input" type="text" inputMode="numeric" placeholder="0" value={receita.od.eixo} onChange={e => handleReceitaChange('od', 'eixo', e.target.value)} onBlur={() => handleReceitaBlur('od', 'eixo')} /></div>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Adição</label><input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.od.adicao} onChange={e => handleReceitaChange('od', 'adicao', e.target.value)} onBlur={() => handleReceitaBlur('od', 'adicao')} /></div>
+                  <div className="form-row receita-grid">
+                    <div>
+                      <label className="form-label" style={{ fontSize: '11px' }}>Esférico</label>
+                      <input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.od.esferico} onChange={e => handleReceitaChange('od', 'esferico', e.target.value)} onBlur={() => handleReceitaBlur('od', 'esferico')} />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label>
+                      <input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.od.cilindro} onChange={e => handleReceitaChange('od', 'cilindro', e.target.value)} onBlur={() => handleReceitaBlur('od', 'cilindro')} />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '11px' }}>Eixo</label>
+                      <input className="form-input" type="text" inputMode="numeric" placeholder="0" value={receita.od.eixo} onChange={e => handleReceitaChange('od', 'eixo', e.target.value)} onBlur={() => handleReceitaBlur('od', 'eixo')} />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '11px' }}>Adição</label>
+                      <input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.od.adicao} onChange={e => handleReceitaChange('od', 'adicao', e.target.value)} onBlur={() => handleReceitaBlur('od', 'adicao')} />
+                    </div>
                   </div>
                 </div>
                 {/* OE Inputs */}
                 <div>
                   <label className="form-label" style={{ fontWeight: 600 }}>Olho Esquerdo (OE)</label>
-                  <div className="form-row" style={{ gridTemplateColumns: 'repeat(4, minmax(60px, 1fr))' }}>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Esférico</label><input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.oe.esferico} onChange={e => handleReceitaChange('oe', 'esferico', e.target.value)} onBlur={() => handleReceitaBlur('oe', 'esferico')} /></div>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label><input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.oe.cilindro} onChange={e => handleReceitaChange('oe', 'cilindro', e.target.value)} onBlur={() => handleReceitaBlur('oe', 'cilindro')} /></div>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Eixo</label><input className="form-input" type="text" inputMode="numeric" placeholder="0" value={receita.oe.eixo} onChange={e => handleReceitaChange('oe', 'eixo', e.target.value)} onBlur={() => handleReceitaBlur('oe', 'eixo')} /></div>
-                    <div><label className="form-label" style={{ fontSize: '11px' }}>Adição</label><input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.oe.adicao} onChange={e => handleReceitaChange('oe', 'adicao', e.target.value)} onBlur={() => handleReceitaBlur('oe', 'adicao')} /></div>
+                  <div className="form-row receita-grid">
+                    <div>
+                      <label className="form-label" style={{ fontSize: '11px' }}>Esférico</label>
+                      <input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.oe.esferico} onChange={e => handleReceitaChange('oe', 'esferico', e.target.value)} onBlur={() => handleReceitaBlur('oe', 'esferico')} />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '11px' }}>Cilíndrico</label>
+                      <input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.oe.cilindro} onChange={e => handleReceitaChange('oe', 'cilindro', e.target.value)} onBlur={() => handleReceitaBlur('oe', 'cilindro')} />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '11px' }}>Eixo</label>
+                      <input className="form-input" type="text" inputMode="numeric" placeholder="0" value={receita.oe.eixo} onChange={e => handleReceitaChange('oe', 'eixo', e.target.value)} onBlur={() => handleReceitaBlur('oe', 'eixo')} />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '11px' }}>Adição</label>
+                      <input className="form-input" type="text" inputMode="decimal" placeholder="0.00" value={receita.oe.adicao} onChange={e => handleReceitaChange('oe', 'adicao', e.target.value)} onBlur={() => handleReceitaBlur('oe', 'adicao')} />
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Conversion Preview */}
               {tipoReceita === 'oculos' && (
-                <div style={{ padding: '16px', background: 'var(--accent-primary-bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-primary)' }}>
-                  <h4 style={{ fontSize: '14px', marginBottom: '8px', color: 'var(--accent-primary)' }}>✨ Grau Convertido (Lente de Contato)</h4>
-                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Distância ao vértice calculada (12mm).</p>
+                <div style={{ padding: '16px', background: 'var(--accent-primary-bg)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59,130,246,0.4)' }}>
+                  <h4 style={{ fontSize: '13px', marginBottom: '6px', color: 'var(--accent-primary)' }}>✨ Grau Convertido (Lente de Contato)</h4>
+                  <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '12px' }}>Distância ao vértice calculada (12mm).</p>
                   
-                  <div style={{ marginBottom: '16px' }}>
-                    <div style={{ fontWeight: 600, fontSize: '12px', marginBottom: '4px' }}>OD (Direito)</div>
-                    <div style={{ display: 'flex', gap: '8px', fontWeight: 600 }}>
-                      <span className="badge badge-purple">{receitaConvertida.od.esferico || '0.00'}</span>
-                      <span className="badge badge-purple">{receitaConvertida.od.cilindro || '0.00'}</span>
-                      <span className="badge badge-purple">{receitaConvertida.od.eixo || '0'}º</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: '6px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>OD (Direito)</div>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        <span className="badge badge-purple">{receitaConvertida.od.esferico || '0.00'}</span>
+                        <span className="badge badge-purple">{receitaConvertida.od.cilindro || '0.00'}</span>
+                        <span className="badge badge-purple">{receitaConvertida.od.eixo || '0'}º</span>
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '12px', marginBottom: '4px' }}>OE (Esquerdo)</div>
-                    <div style={{ display: 'flex', gap: '8px', fontWeight: 600 }}>
-                      <span className="badge badge-purple">{receitaConvertida.oe.esferico || '0.00'}</span>
-                      <span className="badge badge-purple">{receitaConvertida.oe.cilindro || '0.00'}</span>
-                      <span className="badge badge-purple">{receitaConvertida.oe.eixo || '0'}º</span>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: '6px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>OE (Esquerdo)</div>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        <span className="badge badge-purple">{receitaConvertida.oe.esferico || '0.00'}</span>
+                        <span className="badge badge-purple">{receitaConvertida.oe.cilindro || '0.00'}</span>
+                        <span className="badge badge-purple">{receitaConvertida.oe.eixo || '0'}º</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -591,40 +617,39 @@ export default function NovoOrcamentoContato() {
             <div style={{ marginBottom: '16px' }}>
               <input className="form-input" placeholder="Buscar lente por modelo ou marca..." value={searchLente} onChange={e => setSearchLente(e.target.value)} autoFocus />
             </div>
-            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            <div style={{ maxHeight: '400px', overflowY: 'auto', overflowX: 'hidden' }}>
               {getCompatibleLenses().map(lente => (
-                <div key={lente.id} className="lente-item" onClick={() => handleSelectLente(lente)} style={{ padding: '12px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
-                  <div>
-                    <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span>{lente.marca} - {lente.modelo}</span>
-                      {lente.compatibilidade === 'Apenas OD' && <span className="badge badge-blue">Apenas OD</span>}
-                      {lente.compatibilidade === 'Apenas OE' && <span className="badge badge-purple">Apenas OE</span>}
-                      {lente.compatibilidade === 'Ambos' && !lente.grausIdenticos && <span className="badge badge-green">Serve para ambos</span>}
-                      {lente.compatibilidade === 'Ambos' && lente.grausIdenticos && <span className="badge badge-amber" title="Como os graus são iguais, 1 caixa pode servir para ambos">Graus Idênticos (1 cx serve ambos)</span>}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                      {lente.desenho} • Descarte: {lente.descarte} • {lente.embalagem} unid/caixa
-                    </div>
-                    {(lente.noteOD || lente.noteOE || !lente.cilExatoOD || !lente.cilExatoOE) && (
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '4px' }}>
-                        {lente.noteOD && <div>OD: {lente.noteOD}</div>}
-                        {lente.noteOE && <div>OE: {lente.noteOE}</div>}
-                        {(!lente.cilExatoOD || !lente.cilExatoOE) && (
-                          <div style={{ color: 'var(--accent-amber)', fontWeight: 500, marginTop: '2px' }}>
-                            ⚠️ Lente se aproxima, mas não tem o grau cilíndrico exato.
-                            {lente.availableCyls && lente.availableCyls.length > 0 && (
-                              <div style={{ fontSize: '10px', marginTop: '2px', opacity: 0.8 }}>
-                                Cilindros disponíveis: {lente.availableCyls.map(c => c > 0 ? `+${c.toFixed(2)}` : c.toFixed(2)).join(' ; ')}
-                              </div>
-                            )}
-                          </div>
-                        )}
+                <div key={lente.id} className="lente-item" onClick={() => handleSelectLente(lente)} style={{ padding: '12px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span>{lente.marca} - {lente.modelo}</span>
+                        {lente.compatibilidade === 'Apenas OD' && <span className="badge badge-purple">Apenas OD</span>}
+                        {lente.compatibilidade === 'Apenas OE' && <span className="badge badge-purple">Apenas OE</span>}
+                        {lente.compatibilidade === 'Ambos' && !lente.grausIdenticos && <span className="badge badge-green">Ambos</span>}
+                        {lente.compatibilidade === 'Ambos' && lente.grausIdenticos && <span className="badge badge-amber">Graus Idênticos</span>}
                       </div>
-                    )}
-
-                  </div>
-                  <div style={{ fontWeight: 600, color: 'var(--accent-green)', display: 'flex', alignItems: 'center' }}>
-                    {formatCurrency(lente.precoCaixa)} / cx
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                        {lente.desenho} • Descarte: {lente.descarte} • {lente.embalagem} unid/cx
+                      </div>
+                      {(lente.noteOD || lente.noteOE || !lente.cilExatoOD || !lente.cilExatoOE) && (
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '4px' }}>
+                          {lente.noteOD && <div>OD: {lente.noteOD}</div>}
+                          {lente.noteOE && <div>OE: {lente.noteOE}</div>}
+                          {(!lente.cilExatoOD || !lente.cilExatoOE) && (
+                            <div style={{ color: 'var(--accent-amber)', fontWeight: 500, marginTop: '2px' }}>
+                              ⚠️ Cil. aproximado.
+                              {lente.availableCyls && lente.availableCyls.length > 0 && (
+                                <span style={{ fontSize: '10px', opacity: 0.8 }}> ({lente.availableCyls.map(c => c > 0 ? `+${c.toFixed(2)}` : c.toFixed(2)).join(', ')})</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ fontWeight: 700, color: 'var(--accent-green)', flexShrink: 0, fontSize: '14px', paddingTop: '2px' }}>
+                      {formatCurrency(lente.precoCaixa)}<span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--text-muted)' }}>/cx</span>
+                    </div>
                   </div>
                 </div>
               ))}
