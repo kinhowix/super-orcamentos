@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { processDiopterValue } from '../services/numericUtils';
+import { useToast } from '../contexts/ToastContext';
 
 /**
  * GrauInput - Componente especializado para inserção de graus / dioptrias.
@@ -12,7 +14,8 @@ import React, { useState, useEffect, useRef } from 'react';
  * - Toque/clique instantâneo que NÃO fecha o teclado no celular (preventDefault)
  * - Suporta digitação direta de '+' ou '-' em teclados físicos
  * - Mantém teclado numérico com ponto/vírgula no celular
- * - Suporta convenção padrão (ex: Cilíndrico e Miopia já iniciam em negativo)
+ * - Auto-formatação de atalhos no blur/enter (ex: 200 -> 2.00, 20 -> 2.00, 25 -> 2.50, 12 -> 12.00)
+ * - Bloqueio de passos inválidos: ajusta para o múltiplo de 0.25 mais próximo e notifica o usuário
  */
 export default function GrauInput({
   value = '',
@@ -25,7 +28,9 @@ export default function GrauInput({
   disabled = false,
   ...rest
 }) {
+  const toast = useToast();
   const [internalSign, setInternalSign] = useState(() => (defaultNegative ? '-' : '+'));
+  const [justAdjusted, setJustAdjusted] = useState(false);
   const inputRef = useRef(null);
   const lastToggleRef = useRef(0);
 
@@ -68,8 +73,6 @@ export default function GrauInput({
   };
 
   const handleToggleEvent = (e) => {
-    // e.preventDefault impede que o clique no botão tire o foco do input,
-    // garantindo que o teclado virtual do celular permaneça aberto!
     e.preventDefault();
     e.stopPropagation();
 
@@ -113,10 +116,46 @@ export default function GrauInput({
     onChange && onChange(newVal);
   };
 
+  const handleBlur = (e) => {
+    if (disabled) return;
+    const raw = String(value || '').trim();
+    if (raw === '' || raw === '-' || raw === '+') {
+      if (raw === '-' || raw === '+') {
+        onChange && onChange('');
+      }
+      onBlur && onBlur(e);
+      return;
+    }
+
+    // Processa shorthand e dioptria
+    const res = processDiopterValue(raw, allowNegative ? isNegative : false);
+
+    if (res.wasAdjusted) {
+      if (toast?.info) {
+        toast.info(`⚠️ Grau ${res.adjustedFrom} ajustado para ${Math.abs(res.numericValue).toFixed(2)} (somente múltiplos de 0.25).`);
+      }
+      setJustAdjusted(true);
+      setTimeout(() => setJustAdjusted(false), 2000);
+    }
+
+    if (raw !== res.formatted) {
+      onChange && onChange(res.formatted);
+    }
+
+    onBlur && onBlur(e);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      inputRef.current?.blur();
+    }
+    rest.onKeyDown && rest.onKeyDown(e);
+  };
+
   const isSm = className.includes('form-input-sm') || className.includes('ocr-result-input');
 
   return (
-    <div className={`grau-input-group ${isSm ? 'is-sm' : ''}`}>
+    <div className={`grau-input-group ${isSm ? 'is-sm' : ''} ${justAdjusted ? 'is-adjusted' : ''}`}>
       {allowNegative && (
         <button
           type="button"
@@ -139,7 +178,8 @@ export default function GrauInput({
         className={`form-input grau-input-field ${allowNegative ? 'has-sign-btn' : ''} ${className}`}
         value={displayMagnitude}
         onChange={handleInputChange}
-        onBlur={onBlur}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
         placeholder={placeholder}
         disabled={disabled}
         {...rest}
@@ -147,4 +187,3 @@ export default function GrauInput({
     </div>
   );
 }
-
